@@ -8,21 +8,39 @@ from tgbot.config import Settings
 settings = Settings()
 DATABASE_URL = f"postgresql+asyncpg://{settings.db.user}:{settings.db.password}@{settings.db.host}/{settings.db.name}"
 
-
-engine = create_async_engine(DATABASE_URL, future=True)
-logger.info("Connected to database")
 Base = declarative_base()
-async_session = sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
-)
 
 
-async def get_session() -> AsyncSession:
-    async with async_session() as session:
-        return session
+def create_engine(database_url: str):
+    engine = create_async_engine(database_url)
+    return engine
 
 
-async def init_models():
+def create_session_factory(database_url: str) -> sessionmaker:
+    engine = create_engine(database_url)
+    session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    return session_factory
+
+
+async def init_models(engine):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+
+# engine = create_async_engine(DATABASE_URL, future=True)
+# logger.info("Connected to database")
+# Base = declarative_base()
+# async_session = sessionmaker(
+#     engine, class_=AsyncSession, expire_on_commit=False
+# )
+#
+#
+# async def get_session() -> AsyncSession:
+#     async with async_session() as session:
+#         return session
+#
+#
+# async def init_models():
+#     async with engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.drop_all)
+#         await conn.run_sync(Base.metadata.create_all)

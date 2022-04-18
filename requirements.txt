@@ -1,7 +1,14 @@
-aiogram
-SQLAlchemy
-pydantic
-python-dotenv
+aiogram~=2.19
+SQLAlchemy==1.4.35
+pydantic~=1.9.0
+python-dotenv==0.20.0
 asyncpg
-alembic
-loguru
+# alembic
+loguru~=0.6.0
+apscheduler~=3.9.1
+httpx~=0.22.0
+
+blockcypher~=1.0.93
+python-dateutil~=2.8.2
+aioredis~=2.0.1
+PyQRCode~=1.2.1
