@@ -1,6 +1,7 @@
 import asyncio
 import random
 from decimal import Decimal
+from string import ascii_letters
 from uuid import uuid4
 
 import httpx
@@ -11,6 +12,19 @@ from tgbot.models.tables import Chat, Sending
 from tgbot.services.datatypes import ChatData, SendingData, Period
 from tgbot.services import db_queries
 # from tgbot.services.scheduler import scheduler
+
+
+def generate_promo_code(len_code: int) -> str:
+    promo_code = "".join(random.choice(ascii_letters) for _ in range(len_code))
+    return promo_code
+
+
+async def check_promo_code(db: AsyncSession, promo_code: str) -> bool:
+    right_promo_code = await db_queries.get_message(db, "promo_code")
+    if right_promo_code and promo_code == right_promo_code.message:
+        await db_queries.delete_message(db, "promo_code")
+        return True
+    return False
 
 
 async def add_chat(db: AsyncSession, data: ChatData):

@@ -55,7 +55,9 @@ async def end_select_chat(msg: Message, db: AsyncSession, state: FSMContext):
     sending_data = SendingData(period=data["period"], chats=data["select_chats"])
     price_in_usd, price_in_btc = await service.get_price(db, sending_data)
     await state.update_data(sending_data=sending_data, price=price_in_btc)
-    await msg.answer(f"Стоимость: {price_in_btc} BTC, {price_in_usd} $. Введите рекламную ссылку")
+    text = "Введите рекламную ссылку" if "is_paid" in data else f"Стоимость: {price_in_btc} BTC, {price_in_usd} $. " \
+                                                                f"Введите рекламную ссылку"
+    await msg.answer(text)
     await state.set_state("get_button_link")
 
 
@@ -72,7 +74,11 @@ async def get_button_title(msg: Message, db: AsyncSession, state: FSMContext):
     sending_data = data["sending_data"]
     price = data["price"]
     sending_data.btn_title = msg.text
-    await db_queries.add_sendings(db, sending_data, str(price), msg.from_user.id)
+    if data.get("is_paid", None):
+        await db_queries.add_sendings(db, sending_data, str(price), msg.from_user.id, is_paid=True)
+        await msg.answer("Готово")
+        await state.finish()
+        return
     kb = kb_payments.buy_keyboard(price, sending_data.period.value)
     await msg.answer("Купите рассылки", reply_markup=kb)
     await state.reset_state(with_data=False)

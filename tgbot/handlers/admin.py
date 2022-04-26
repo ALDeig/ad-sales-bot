@@ -5,7 +5,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tgbot.services import service
+from tgbot.services import service, db_queries
 from tgbot.services.datatypes import ChatData
 from tgbot.services.db_queries import get_chats, delete_chat, add_message, add_user, get_message
 from tgbot.keyboards import kb_admin, kb_user
@@ -203,6 +203,28 @@ async def get_text_for_start_message(msg: Message, db, state: FSMContext):
     await state.finish()
 
 
+async def cmd_get_promo_code(msg: Message, db: AsyncSession):
+    promo_code = service.generate_promo_code(8)
+    await msg.answer(promo_code)
+    await add_message(db, "promo_code", promo_code)
+
+
+async def cmd_add_group_user(msg: Message, state: FSMContext):
+    await msg.answer("Введите id пользователя")
+    await state.set_state("get_id_group_user")
+
+
+async def get_id_group_user(msg: Message, db: AsyncSession, state: FSMContext):
+    try:
+        user_id = int(msg.text)
+    except ValueError:
+        await msg.answer("ID должен быть числом")
+        return
+    await db_queries.add_group_user(db, user_id, True)
+    await state.finish()
+    await msg.answer("Готово")
+
+
 def register_admin(dp: Dispatcher):
     dp.register_message_handler(user_start, commands=["start"], state="*")
     dp.register_message_handler(cmd_add_chat, commands=["add_chat"], is_admin=True)
@@ -217,3 +239,6 @@ def register_admin(dp: Dispatcher):
     dp.register_callback_query_handler(select_chat_for_update, state="select_chat_for_update")
     dp.register_message_handler(cmd_update_start_message, commands=["update_start_message"])
     dp.register_message_handler(get_text_for_start_message, state="get_text_for_start_message")
+    dp.register_message_handler(cmd_get_promo_code, commands=["get_promo_code"], is_admin=True)
+    dp.register_message_handler(cmd_add_group_user, commands=["add_group_user"])
+    dp.register_message_handler(get_id_group_user, state="get_id_group_user")

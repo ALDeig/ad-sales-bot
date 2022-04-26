@@ -11,9 +11,10 @@ from aiogram.utils.exceptions import ChatNotFound
 from tgbot.config import Settings
 from tgbot.filters.admin import AdminFilter, GroupFilter
 from tgbot.handlers.admin import register_admin
-from tgbot.handlers.user import register_user
-from tgbot.handlers.payments import register_payment
 from tgbot.handlers.group import register_group
+from tgbot.handlers.payments import register_payment
+from tgbot.handlers.promo_code import registry_handler_promo_code
+from tgbot.handlers.user import register_user
 from tgbot.middlewares.db import DbMiddleware
 from tgbot.services.db_connection import create_session_factory
 from tgbot.services.logger import setup_logger
@@ -32,6 +33,7 @@ def register_all_filters(dp):
 def register_all_handlers(dp):
     register_admin(dp)
     register_group(dp)
+    registry_handler_promo_code(dp)
     register_user(dp)
     register_payment(dp)
 
@@ -45,6 +47,8 @@ async def set_commands(dp: Dispatcher, admin_ids: list[int]):
         BotCommand("add_chat", "Добавить чат (в группе)"),
         BotCommand("delete_chat", "Удалить чат"),
         BotCommand("edit_chat", "Изменить чат"),
+        BotCommand("add_group_user", "Добавить пользователя без каптчи"),
+        BotCommand("get_promo_code", "Получить промокод"),
         BotCommand("update_start_message", "Изменить приветственное сообщение")
     ]
     for admin_id in admin_ids:

@@ -8,7 +8,6 @@ loguru
 apscheduler
 httpx
 
-blockcypher
 python-dateutil
 aioredis
 qrcode

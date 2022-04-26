@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.dialects.postgresql import insert
 
-from tgbot.models.tables import User, Sending, Message, Chat
+from tgbot.models.tables import User, Sending, Message, Chat, GroupUser
 from tgbot.services.datatypes import ChatData, SendingData
 
 
@@ -29,6 +29,11 @@ async def add_message(session: AsyncSession, name: str, message_text: str) -> bo
     except (IntegrityError, DBAPIError):
         await session.rollback()
         return False
+
+
+async def delete_message(session: AsyncSession, name: str):
+    await session.execute(sa.delete(Message).where(Message.name == name))
+    await session.commit()
 
 
 # Запросы для чатов
@@ -75,14 +80,15 @@ async def delete_chat(session: AsyncSession, chat_id: str):
     await session.commit()
 
 
-async def add_sendings(session: AsyncSession, sending_data: SendingData, price: str, from_chat_id: int):
+async def add_sendings(session: AsyncSession, sending_data: SendingData, price: str, from_chat_id: int, is_paid=False):
+    expiration = date.today() + timedelta(days=7) if is_paid else None
     for chat in sending_data.chats:
         sending = Sending(
             chat=chat,
             button_title=sending_data.btn_title,
             button_link=sending_data.btn_link,
             price=price,
-            # expiration=date.today() + timedelta(days=sending_data.period.value),
+            expiration=expiration,
             user_id=from_chat_id
         )
         session.add(sending)
@@ -124,3 +130,34 @@ async def add_user(session: AsyncSession, user_id: int, username: str | None):
     await session.execute(do_nothing_stmt)
     await session.commit()
 
+
+async def add_group_user(session: AsyncSession, user_id: int, allow_ads: bool, check_time: datetime | None = None):
+    if allow_ads:
+        user = await get_group_user(session, user_id)
+        if user:
+            await update_group_user(session, user_id, {"allow_ads": True, "check_time": None})
+            await session.commit()
+            return
+    session.add(
+        GroupUser(
+            user_id=user_id,
+            allow_ads=allow_ads,
+            check_time=check_time
+        )
+    )
+    await session.commit()
+
+
+async def get_group_user(session: AsyncSession, user_id: int) -> GroupUser | None:
+    user = await session.execute(sa.select(GroupUser).where(GroupUser.user_id == user_id))
+    return user.scalar()
+
+
+async def delete_group_user(session: AsyncSession, check_time: datetime):
+    await session.execute(sa.delete(GroupUser).where(GroupUser.check_time < check_time))
+    await session.commit()
+
+
+async def update_group_user(session: AsyncSession, user_id: int, update_field: dict):
+    await session.execute(sa.update(GroupUser).where(GroupUser.user_id == user_id).values(**update_field))
+    await session.commit()

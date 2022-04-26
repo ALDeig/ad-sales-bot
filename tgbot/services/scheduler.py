@@ -1,3 +1,5 @@
+from datetime import timedelta, datetime
+
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import sessionmaker
@@ -11,6 +13,7 @@ scheduler = AsyncIOScheduler(timezone="Europe/Samara")
 async def job_for_delete_sendings(session_factory: sessionmaker):
     async with session_factory() as session:
         await db_queries.delete_old_sending(session)
+        await db_queries.delete_group_user(session, datetime.now() - timedelta(days=1))
 
 
 # async def update_sending_on_start_bot(bot, session_factory):
