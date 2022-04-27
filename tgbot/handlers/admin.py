@@ -225,6 +225,28 @@ async def get_id_group_user(msg: Message, db: AsyncSession, state: FSMContext):
     await msg.answer("Готово")
 
 
+async def cmd_delete_my_ads(msg: Message, db: AsyncSession, state: FSMContext):
+    my_ads = await db_queries.get_sendings_by_user(db, msg.from_user.id)
+    messages = []
+    for my_ad in my_ads:
+        kb = kb_admin.select_sending(my_ad)
+        sent_msg = await msg.answer(
+            f"Название кнопки: {my_ad.button_title}\nСсылка: {my_ad.button_link}", reply_markup=kb
+        )
+        messages.append(sent_msg.message_id)
+    await state.update_data(messages=messages)
+    await state.set_state("select_ad_for_delete")
+
+
+async def btn_select_ad_for_delete(call: CallbackQuery, db: AsyncSession, state: FSMContext):
+    await db_queries.delete_sending(db, call.data)
+    data = await state.get_data()
+    for message in data["messages"]:
+        await call.bot.delete_message(call.from_user.id, int(message))
+    await call.message.answer("Готово")
+    await state.finish()
+
+
 def register_admin(dp: Dispatcher):
     dp.register_message_handler(user_start, commands=["start"], state="*")
     dp.register_message_handler(cmd_add_chat, commands=["add_chat"], is_admin=True)
@@ -242,3 +264,5 @@ def register_admin(dp: Dispatcher):
     dp.register_message_handler(cmd_get_promo_code, commands=["get_promo_code"], is_admin=True)
     dp.register_message_handler(cmd_add_group_user, commands=["add_group_user"])
     dp.register_message_handler(get_id_group_user, state="get_id_group_user")
+    dp.register_message_handler(cmd_delete_my_ads, commands=["delete_ads"])
+    dp.register_callback_query_handler(btn_select_ad_for_delete, state="select_ad_for_delete")

@@ -10,9 +10,9 @@ from tgbot.services.service import update_sending
 scheduler = AsyncIOScheduler(timezone="Europe/Samara")
 
 
-async def job_for_delete_sendings(session_factory: sessionmaker):
+async def job_for_delete_sendings(session_factory: sessionmaker, admin_ids: list):
     async with session_factory() as session:
-        await db_queries.delete_old_sending(session)
+        await db_queries.delete_old_sending(session, admin_ids)
         await db_queries.delete_group_user(session, datetime.now() - timedelta(days=1))
 
 
@@ -23,5 +23,6 @@ async def job_for_delete_sendings(session_factory: sessionmaker):
 #             await update_sending(session, bot, scheduler, sending)
 
 
-def creat_jobs(session_factory):
-    scheduler.add_job(job_for_delete_sendings, "cron", hour=1, args=[session_factory])
+def creat_jobs(session_factory, admin_ids: list):
+    # scheduler.add_job(job_for_delete_sendings, "cron", hour=1, args=[session_factory, admin_ids])
+    scheduler.add_job(job_for_delete_sendings, "cron", hour=11, minute=11, args=[session_factory, admin_ids])

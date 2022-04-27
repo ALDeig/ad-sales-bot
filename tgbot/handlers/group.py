@@ -29,7 +29,7 @@ async def check_count_messages(redis: Redis, session: AsyncSession, chat_id: str
 
 
 async def send_ads(redis: Redis, session: AsyncSession, msg: types.Message):
-    sendings = await db_queries.get_sendings(session, str(msg.chat.id))
+    sendings = await db_queries.get_sendings_by_chat(session, str(msg.chat.id))
     if not sendings:
         return
     kb = kb_ads_buttons(sendings)

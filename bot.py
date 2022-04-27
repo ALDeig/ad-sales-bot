@@ -49,7 +49,8 @@ async def set_commands(dp: Dispatcher, admin_ids: list[int]):
         BotCommand("edit_chat", "Изменить чат"),
         BotCommand("add_group_user", "Добавить пользователя без каптчи"),
         BotCommand("get_promo_code", "Получить промокод"),
-        BotCommand("update_start_message", "Изменить приветственное сообщение")
+        BotCommand("update_start_message", "Изменить приветственное сообщение"),
+        BotCommand("delete_ads", "Удалить рассылку")
     ]
     for admin_id in admin_ids:
         try:
@@ -87,7 +88,7 @@ async def main():
     register_all_handlers(dp)
     await set_commands(dp, config.tg.admins)
     # await scheduler.update_sending_on_start_bot(bot, session_factory)
-    scheduler.creat_jobs(session_factory)
+    scheduler.creat_jobs(session_factory, config.tg.admins)
 
     # start
     try:

@@ -32,7 +32,7 @@ async def btn_buy(call: types.CallbackQuery, state: FSMContext):
 async def cancel_payment(call: types.CallbackQuery, db: AsyncSession, state: FSMContext):
     await call.message.edit_text("Отменено")
     price = call.data.split(":")[-1]
-    await db_queries.delete_sending(price)
+    await db_queries.delete_sending(db, price)
     await state.finish()
 
 

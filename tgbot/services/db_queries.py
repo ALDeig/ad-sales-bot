@@ -102,10 +102,20 @@ async def update_expirations(session: AsyncSession, paid_period: int, price: str
     await session.commit()
 
 
-async def get_sendings(session: AsyncSession, chat_id: str) -> list[Sending]:
+async def get_sendings_by_chat(session: AsyncSession, chat_id: str) -> list[Sending]:
     # result = await session.execute(sa.select(Sending).where(Sending.chat == chat_id and Sending.expiration != None))
     result = await session.execute(sa.select(Sending).where(Sending.chat == chat_id, Sending.expiration.is_not(None)))
     return result.scalars().all()
+
+
+async def get_sendings_by_user(session: AsyncSession, user_id: str) -> list[Sending]:
+    prices = await session.execute(sa.select(sa.distinct(Sending.price)).where(Sending.user_id == user_id))
+    result = []
+    for price in prices:
+        sql = sa.select(Sending).where(Sending.price == price[0], Sending.user_id == user_id).limit(1)
+        sending = await session.execute(sql)
+        result.append(sending.scalar())
+    return result
 
 
 async def delete_sending(session: AsyncSession, price: str):
@@ -113,8 +123,9 @@ async def delete_sending(session: AsyncSession, price: str):
     await session.commit()
 
 
-async def delete_old_sending(session: AsyncSession):
-    res = await session.execute(sa.delete(Sending).where(Sending.expiration < date.today()))
+async def delete_old_sending(session: AsyncSession, admin_ids: list):
+    sql = sa.delete(Sending).where(Sending.expiration < date.today(), Sending.user_id.not_in(admin_ids))
+    await session.execute(sql)
     await session.commit()
     # return res.scalars().all()
 

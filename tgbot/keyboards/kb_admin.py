@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from tgbot.models.tables import Chat
+from tgbot.models.tables import Chat, Sending
 
 
 def select_chat(chats: list[Chat]):
@@ -16,5 +16,12 @@ def select_chat(chats: list[Chat]):
 def add_chat(chat_id: int | str):
     kb = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton(text="Добавить чат", callback_data=f"add:{chat_id}")
+    )
+    return kb
+
+
+def select_sending(my_ad: Sending):
+    kb = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton(text="Удалить", callback_data=my_ad.price)
     )
     return kb
