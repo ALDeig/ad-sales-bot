@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 
 import aioredis
@@ -48,6 +49,7 @@ async def set_commands(dp: Dispatcher, admin_ids: list[int]):
         BotCommand("delete_chat", "Удалить чат"),
         BotCommand("edit_chat", "Изменить чат"),
         BotCommand("add_group_user", "Добавить пользователя без каптчи"),
+        BotCommand("send_forbidden_words", "Ввести слова для удаления"),
         BotCommand("get_promo_code", "Получить промокод"),
         BotCommand("update_start_message", "Изменить приветственное сообщение"),
         BotCommand("delete_ads", "Удалить рассылку")
@@ -68,6 +70,11 @@ async def main():
     config = Settings()
     database_url = f"postgresql+asyncpg://{config.db.user}:{config.db.password}@{config.db.host}/{config.db.name}"
     redis = aioredis.from_url("redis://localhost", decode_responses=True)
+    await redis.delete("forbidden_words")
+    with open("documents/forbidden_words.json", "r") as file:
+        words = json.load(file)
+        if words["words"]:
+            await redis.lpush("forbidden_words", *words["words"])
 
     session_factory = create_session_factory(database_url)
 

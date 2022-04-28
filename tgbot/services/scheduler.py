@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import sessionmaker
 
 from tgbot.services import db_queries
-from tgbot.services.service import update_sending
+# from tgbot.services.service import update_sending
 
 scheduler = AsyncIOScheduler(timezone="Europe/Samara")
 

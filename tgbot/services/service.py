@@ -1,14 +1,15 @@
-import asyncio
+# import asyncio
 import random
+import re
 from decimal import Decimal
 from string import ascii_letters
-from uuid import uuid4
+# from uuid import uuid4
 
 import httpx
-from aiogram import Bot
+# from aiogram import Bot
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tgbot.models.tables import Chat, Sending
+# from tgbot.models.tables import Chat, Sending
 from tgbot.services.datatypes import ChatData, SendingData, Period
 from tgbot.services import db_queries
 # from tgbot.services.scheduler import scheduler
@@ -65,43 +66,53 @@ async def get_price(session: AsyncSession, sending_data: SendingData) -> tuple:
     return price_in_usd, price_in_btc
 
 
-async def start_sending(bot: Bot, chats: list[str], post_id: int, from_chat_id: int):
-    for chat in chats:
-        try:
-            await bot.copy_message(chat, from_chat_id, post_id)
-        except Exception as er:
-            print(er)
+# async def start_sending(bot: Bot, chats: list[str], post_id: int, from_chat_id: int):
+#     for chat in chats:
+#         try:
+#             await bot.copy_message(chat, from_chat_id, post_id)
+#         except Exception as er:
+#             print(er)
 
 
-def calculate_interval(amount_posts: int) -> str:
-    # intervals = {1: ((20, 35),), 2: ((20, 27), (27, 35)), 3: ((20, 25), (25, 30), (30, 35))}
-    intervals = {1: ((9, 21),), 2: ((9, 16), (16, 21)), 3: ((9, 12), (12, 17), (17, 21))}
-    interval_str = ""
-    for interval in intervals[amount_posts]:
-        interval_str += str(random.randint(interval[0], interval[1])) + ", "
-    return interval_str[:-2]
+# def calculate_interval(amount_posts: int) -> str:
+#     # intervals = {1: ((20, 35),), 2: ((20, 27), (27, 35)), 3: ((20, 25), (25, 30), (30, 35))}
+#     intervals = {1: ((9, 21),), 2: ((9, 16), (16, 21)), 3: ((9, 12), (12, 17), (17, 21))}
+#     interval_str = ""
+#     for interval in intervals[amount_posts]:
+#         interval_str += str(random.randint(interval[0], interval[1])) + ", "
+#     return interval_str[:-2]
 
 
-async def save_sending(session: AsyncSession, bot: Bot, sending_data: SendingData, from_chat_id: int):
+# async def save_sending(session: AsyncSession, bot: Bot, sending_data: SendingData, from_chat_id: int):
     # for chat in sending_data.chats:
     #     uuid = uuid4()
     #     await db_queries.add_sending(session, from_chat_id,)
     # interval = calculate_interval(sending_data.amount_posts)
     # print(interval)
     # scheduler = bot.get("scheduler")
-    uuid = uuid4()
+    # uuid = uuid4()
     # scheduler.add_job(start_sending, "cron", hour=interval, id=str(uuid), jitter=100,
     #                   args=[bot, sending_data.chats, sending_data.post_id, from_chat_id])
-    await db_queries.add_sending(session, sending_data, from_chat_id, uuid)
+    # await db_queries.add_sending(session, sending_data, from_chat_id, uuid)
 
 
-async def update_sending(session: AsyncSession, bot: Bot, scheduler, sending: Sending):
-    intervals = calculate_interval(sending.amount_posts)
-    print(intervals)
-    uuid = uuid4()
-    scheduler.add_job(start_sending, "cron", hour=intervals, id=str(uuid), jitter=100,
-                      args=[bot, sending.chats, sending.post_id, sending.user_id])
-    await db_queries.update_sending(session, sending.id, uuid)
+# async def update_sending(session: AsyncSession, bot: Bot, scheduler, sending: Sending):
+#     intervals = calculate_interval(sending.amount_posts)
+#     print(intervals)
+#     uuid = uuid4()
+#     scheduler.add_job(start_sending, "cron", hour=intervals, id=str(uuid), jitter=100,
+#                       args=[bot, sending.chats, sending.post_id, sending.user_id])
+#     await db_queries.update_sending(session, sending.id, uuid)
+
+
+def check_forbidden_word_in_text(msg_text: str, forbidden_words: list) -> bool:
+    pattern_text = r"http\S+|@\S+|@\s\S+"
+    if forbidden_words:
+        pattern_text += "|" + "|".join(forbidden_words)
+    pattern = re.compile(pattern_text)
+    text = msg_text.lower()
+    result = re.search(pattern, text)
+    return True if result else False
 
 
 # async def main():

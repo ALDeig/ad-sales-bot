@@ -1,8 +1,11 @@
+import json
 import logging
+from pathlib import Path
 
 from aiogram import Dispatcher
 from aiogram.dispatcher import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, ContentType
+from aioredis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tgbot.services import service, db_queries
@@ -210,19 +213,22 @@ async def cmd_get_promo_code(msg: Message, db: AsyncSession):
 
 
 async def cmd_add_group_user(msg: Message, state: FSMContext):
-    await msg.answer("Введите id пользователя")
-    await state.set_state("get_id_group_user")
+    await msg.answer("Отправьте файл с ID пользователей")
+    await state.set_state("get_file_group_user")
 
 
-async def get_id_group_user(msg: Message, db: AsyncSession, state: FSMContext):
-    try:
-        user_id = int(msg.text)
-    except ValueError:
-        await msg.answer("ID должен быть числом")
-        return
-    await db_queries.add_group_user(db, user_id, True)
+async def get_file_with_group_user(msg: Message, db: AsyncSession, state: FSMContext):
+    file = await msg.document.download()
+    with open(file.name) as file:
+        for line in file:
+            try:
+                user_id = int(line.strip())
+            except ValueError:
+                continue
+            await db_queries.add_group_user(db, user_id, True)
     await state.finish()
     await msg.answer("Готово")
+    Path(file.name).unlink()
 
 
 async def cmd_delete_my_ads(msg: Message, db: AsyncSession, state: FSMContext):
@@ -247,6 +253,27 @@ async def btn_select_ad_for_delete(call: CallbackQuery, db: AsyncSession, state:
     await state.finish()
 
 
+async def cmd_forbidden_words(msg: Message, state: FSMContext):
+    await msg.answer("Отправьте файл со словами")
+    await state.set_state("get_file_with_words")
+
+
+async def get_file_with_words(msg: Message, state: FSMContext):
+    redis: Redis = msg.bot.get("redis")
+    file_with_words = await msg.document.download()
+    words = []
+    with open(file_with_words.name) as file:
+        for line in file:
+            words.append(line.strip().lower())
+    await redis.delete("forbidden_words")
+    await redis.lpush("forbidden_words", *words)
+    with open("documents/forbidden_words.json", "w") as file:
+        json.dump({"words": words}, file, indent=4, ensure_ascii=False)
+    await msg.answer("Готово")
+    await state.finish()
+    Path(file_with_words.name).unlink()
+
+
 def register_admin(dp: Dispatcher):
     dp.register_message_handler(user_start, commands=["start"], state="*")
     dp.register_message_handler(cmd_add_chat, commands=["add_chat"], is_admin=True)
@@ -262,7 +289,10 @@ def register_admin(dp: Dispatcher):
     dp.register_message_handler(cmd_update_start_message, commands=["update_start_message"])
     dp.register_message_handler(get_text_for_start_message, state="get_text_for_start_message")
     dp.register_message_handler(cmd_get_promo_code, commands=["get_promo_code"], is_admin=True)
-    dp.register_message_handler(cmd_add_group_user, commands=["add_group_user"])
-    dp.register_message_handler(get_id_group_user, state="get_id_group_user")
-    dp.register_message_handler(cmd_delete_my_ads, commands=["delete_ads"])
+    dp.register_message_handler(cmd_add_group_user, commands=["add_group_user"], is_admin=True)
+    dp.register_message_handler(get_file_with_group_user, state="get_file_group_user",
+                                content_types=ContentType.DOCUMENT)
+    dp.register_message_handler(cmd_delete_my_ads, commands=["delete_ads"], is_admin=True)
     dp.register_callback_query_handler(btn_select_ad_for_delete, state="select_ad_for_delete")
+    dp.register_message_handler(cmd_forbidden_words, commands=["send_forbidden_words"], is_admin=True)
+    dp.register_message_handler(get_file_with_words, state="get_file_with_words", content_types=ContentType.DOCUMENT)

@@ -10,8 +10,9 @@ from aioredis.client import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tgbot.keyboards.kb_group import emojis_kb
-from tgbot.services import db_queries
 from tgbot.keyboards.kb_sendigs import kb_ads_buttons
+from tgbot.services import db_queries
+from tgbot.services.service import check_forbidden_word_in_text
 
 
 async def check_count_messages(redis: Redis, session: AsyncSession, chat_id: str) -> bool | None:
@@ -46,28 +47,24 @@ def delete_link_in_text(text: str) -> str:
     return clear_text
 
 
-async def edit_message(msg: types.Message):
+async def edit_message(msg: types.Message, redis: Redis):
+    forbidden_words = await redis.lrange("forbidden_words", 0, -1)
+    print(forbidden_words)
     if "text" in msg:
-        text = delete_link_in_text(msg.text)
-        if text != msg.text:
-            try:
-                await msg.edit_text(text)
-            except MessageCantBeEdited:
-                await msg.delete()
+        is_forbidden_msg = check_forbidden_word_in_text(msg.text, forbidden_words)
+        if is_forbidden_msg:
+            await msg.delete()
     elif "caption" in msg:
-        caption = delete_link_in_text(msg.caption)
-        if caption != msg.caption:
-            try:
-                await msg.edit_caption(caption)
-            except MessageCantBeEdited:
-                await msg.delete()
+        is_forbidden_msg = check_forbidden_word_in_text(msg.caption, forbidden_words)
+        if is_forbidden_msg:
+            await msg.delete()
 
 
-async def get_new_message(msg: types.Message, db: AsyncSession):
-    redis = msg.bot.get("redis")
-    check_result = await check_count_messages(redis, db, str(msg.chat.id))
-    if check_result:
-        await send_ads(redis, db, msg)
+# async def get_new_message(msg: types.Message, db: AsyncSession):
+#     redis = msg.bot.get("redis")
+#     check_result = await check_count_messages(redis, db, str(msg.chat.id))
+#     if check_result:
+#         await send_ads(redis, db, msg)
 
 
 async def check_allowed_user(session: AsyncSession, user_id: int) -> bool:
@@ -87,7 +84,7 @@ async def get_message_in_group(msg: types.Message, db: AsyncSession, state: FSMC
     user = await db_queries.get_group_user(db, msg.from_user.id)
     if user:
         if not user.allow_ads:
-            await edit_message(msg)
+            await edit_message(msg, redis)
         result_check_count_message = await check_count_messages(redis, db, str(msg.chat.id))
         if result_check_count_message:
             await send_ads(redis, db, msg)
