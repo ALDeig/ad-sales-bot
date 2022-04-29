@@ -1,7 +1,6 @@
 from aiogram import Dispatcher
 from aiogram.dispatcher import FSMContext
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove, ContentType, LabeledPrice, PreCheckoutQuery
-from blockcypher import from_base_unit
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tgbot.keyboards import kb_user, kb_payments
@@ -84,43 +83,6 @@ async def get_button_title(msg: Message, db: AsyncSession, state: FSMContext):
     await state.reset_state(with_data=False)
 
 
-# async def select_amount_posts(call: CallbackQuery, db: AsyncSession, state: FSMContext):
-#     await call.answer()
-#     data = await state.get_data()
-#     sending_data = SendingData(period=data["period"], chats=data["select_chats"], amount_posts=int(call.data))
-#     price = await service.get_price(db, sending_data)
-#     btc_price = from_base_unit(price, "btc")
-#     await state.update_data(sending_data=sending_data, price=btc_price)
-#     await call.message.answer(f"Стоимость - {price}. Введите ваш пост")
-#     await state.set_state("get_post")
-
-
-# async def get_post_message(msg: Message, state: FSMContext):
-#     data = await state.get_data()
-#     config = msg.bot.get("config")
-#     data["sending_data"].post_id = msg.message_id
-#     await state.update_data(sending_data=data["sending_data"])
-#     price = data["price"] * 100
-#     await msg.bot.send_invoice(
-#         chat_id=msg.from_user.id,
-#         title="Покупка рекламных постов",
-#         description=f"На {data['sending_data'].period.value} дней",
-#         payload="asdfasfas",
-#         provider_token=config.tg.provider_token,
-#         currency="RUB",
-#         prices=[LabeledPrice(label="Купить", amount=price)],
-#         start_parameter="adsagggsdkdkk"
-#     )
-#
-#
-# async def process_pre_checkout_query(query: PreCheckoutQuery, db, state: FSMContext):
-#     await query.bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
-#     await query.bot.send_message(query.from_user.id, "Спасибо за покупку. Ваши рассылки созданы")
-#     data = await state.get_data()
-#     await service.create_sending(db, query.bot, data["sending_data"], query.from_user.id)
-#     await state.finish()
-
-
 def register_user(dp: Dispatcher):
     dp.register_message_handler(user_start, commands=["start"], state="*")
     dp.register_callback_query_handler(btn_buy_ad, lambda call: call.data == "buy_ad")
@@ -129,8 +91,4 @@ def register_user(dp: Dispatcher):
     dp.register_message_handler(end_select_chat, text="Завершить выбор", state="select_chat")
     dp.register_message_handler(get_button_link, state="get_button_link")
     dp.register_message_handler(get_button_title, state="get_button_title")
-    # dp.register_callback_query_handler()
-    # dp.register_callback_query_handler(select_amount_posts, state="select_amount_posts")
-    # dp.register_message_handler(get_post_message, state="get_post", content_types=ContentType.ANY)
-    # dp.register_pre_checkout_query_handler(process_pre_checkout_query, state="get_post")
 

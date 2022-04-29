@@ -101,66 +101,6 @@ async def price_week(msg: Message, db, state: FSMContext):
     await state.finish()
 
 
-# async def price_two_post_month(msg: Message, state: FSMContext):
-#     price = check_msg_price(msg.text)
-#     if not price:
-#         await msg.answer("Цена должна быть числом")
-#         return
-#     chat_data: ChatData = (await state.get_data()).get("chat_data")
-#     chat_data.price_month_two_post = price
-#     await state.update_data(chat_data=chat_data)
-#     await msg.answer(f"Введите цену за 3 поста на месяц")
-#     await state.set_state("price_three_post_month")
-#
-#
-# async def price_three_post_month(msg: Message, state: FSMContext):
-#     price = check_msg_price(msg.text)
-#     if not price:
-#         await msg.answer("Цена должна быть числом")
-#         return
-#     chat_data: ChatData = (await state.get_data()).get("chat_data")
-#     chat_data.price_month_three_post = price
-#     await state.update_data(chat_data=chat_data)
-#     await msg.answer(f"Введите цену за 1 пост на неделю")
-#     await state.set_state("price_one_post_week")
-#
-#
-# async def price_one_post_week(msg: Message, state: FSMContext):
-#     price = check_msg_price(msg.text)
-#     if not price:
-#         await msg.answer("Цена должна быть числом")
-#         return
-#     chat_data: ChatData = (await state.get_data()).get("chat_data")
-#     chat_data.price_week_one_post = price
-#     await state.update_data(chat_data=chat_data)
-#     await msg.answer(f"Введите цену за 2 поста на неделю")
-#     await state.set_state("price_two_post_week")
-#
-#
-# async def price_two_post_week(msg: Message, state: FSMContext):
-#     price = check_msg_price(msg.text)
-#     if not price:
-#         await msg.answer("Цена должна быть числом")
-#         return
-#     chat_data: ChatData = (await state.get_data()).get("chat_data")
-#     chat_data.price_week_two_post = price
-#     await state.update_data(chat_data=chat_data)
-#     await msg.answer(f"Введите цену за 3 поста на неделю")
-#     await state.set_state("price_three_post_week")
-#
-#
-# async def price_three_post_week(msg: Message, db, state: FSMContext):
-#     price = check_msg_price(msg.text)
-#     if not price:
-#         await msg.answer("Цена должна быть числом")
-#         return
-#     chat_data: ChatData = (await state.get_data()).get("chat_data")
-#     chat_data.price_week_three_post = price
-#     await service.add_chat(db, chat_data)
-#     await msg.answer("Готово")
-#     await state.finish()
-
-
 # Удаление чата
 async def cmd_delete_chat(msg: Message, db, state: FSMContext):
     chats = await get_chats(db)
@@ -191,8 +131,10 @@ async def select_chat_for_update(call: CallbackQuery, state: FSMContext):
     chat_data.chat_id = call.data
     await state.update_data(chat_data=chat_data)
     amount_members = await call.bot.get_chat_members_count(call.data)
-    await call.message.answer(f"Количество участников в группе - {amount_members}. Введите цену за месяц")
-    await state.set_state("price_month")
+    await call.message.answer(
+        f"Количество участников в группе - {amount_members}. Через какое количество постов должна появляться реклама?"
+    )
+    await state.set_state("get_amount_posts")
 
 
 async def cmd_update_start_message(msg: Message, state: FSMContext):
@@ -224,6 +166,7 @@ async def get_file_with_group_user(msg: Message, db: AsyncSession, state: FSMCon
             try:
                 user_id = int(line.strip())
             except ValueError:
+                logging.error("Один из id был не числом")
                 continue
             await db_queries.add_group_user(db, user_id, True)
     await state.finish()

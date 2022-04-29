@@ -1,13 +1,12 @@
 from datetime import timedelta, datetime
 
-from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import sessionmaker
 
 from tgbot.services import db_queries
 # from tgbot.services.service import update_sending
 
-scheduler = AsyncIOScheduler(timezone="Europe/Samara")
+scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 
 
 async def job_for_delete_sendings(session_factory: sessionmaker, admin_ids: list):
@@ -25,4 +24,4 @@ async def job_for_delete_sendings(session_factory: sessionmaker, admin_ids: list
 
 def creat_jobs(session_factory, admin_ids: list):
     # scheduler.add_job(job_for_delete_sendings, "cron", hour=1, args=[session_factory, admin_ids])
-    scheduler.add_job(job_for_delete_sendings, "cron", hour=11, minute=11, args=[session_factory, admin_ids])
+    scheduler.add_job(job_for_delete_sendings, "cron", hour=1, minute=0, args=[session_factory, admin_ids])

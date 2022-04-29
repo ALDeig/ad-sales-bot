@@ -49,7 +49,6 @@ def delete_link_in_text(text: str) -> str:
 
 async def edit_message(msg: types.Message, redis: Redis):
     forbidden_words = await redis.lrange("forbidden_words", 0, -1)
-    print(forbidden_words)
     if "text" in msg:
         is_forbidden_msg = check_forbidden_word_in_text(msg.text, forbidden_words)
         if is_forbidden_msg:
@@ -60,13 +59,6 @@ async def edit_message(msg: types.Message, redis: Redis):
             await msg.delete()
 
 
-# async def get_new_message(msg: types.Message, db: AsyncSession):
-#     redis = msg.bot.get("redis")
-#     check_result = await check_count_messages(redis, db, str(msg.chat.id))
-#     if check_result:
-#         await send_ads(redis, db, msg)
-
-
 async def check_allowed_user(session: AsyncSession, user_id: int) -> bool:
     check = await db_queries.get_group_user(session, user_id)
     if check:
@@ -74,17 +66,25 @@ async def check_allowed_user(session: AsyncSession, user_id: int) -> bool:
     return False
 
 
+async def check_group_admin(msg: types.Message):
+    member = await msg.bot.get_chat_member(msg.chat.id, msg.from_user.id)
+    if member.status in ["administrator", "creator"]:
+        return True
+    return False
+
+
 async def get_message_in_group(msg: types.Message, db: AsyncSession, state: FSMContext):
+    await check_group_admin(msg)
     redis = msg.bot.get("redis")
-    if msg.from_user.username == "GroupAnonymousBot":
+    if msg.from_user.username == "GroupAnonymousBot" or await check_group_admin(msg):
         result_check_count_message = await check_count_messages(redis, db, str(msg.chat.id))
         if result_check_count_message:
             await send_ads(redis, db, msg)
         return
     user = await db_queries.get_group_user(db, msg.from_user.id)
     if user:
-        if not user.allow_ads:
-            await edit_message(msg, redis)
+        # if not user.allow_ads:
+        await edit_message(msg, redis)
         result_check_count_message = await check_count_messages(redis, db, str(msg.chat.id))
         if result_check_count_message:
             await send_ads(redis, db, msg)
