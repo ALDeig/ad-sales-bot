@@ -45,7 +45,7 @@ async def set_commands(dp: Dispatcher, admin_ids: list[int]):
     )
     commands_for_admin = [
         BotCommand("start", "Старт"),
-        BotCommand("add_chat", "Добавить чат (в группе)"),
+        # BotCommand("add_chat", "Добавить чат (в группе)"),
         BotCommand("delete_chat", "Удалить чат"),
         BotCommand("edit_chat", "Изменить чат"),
         BotCommand("add_group_user", "Добавить пользователя без каптчи"),

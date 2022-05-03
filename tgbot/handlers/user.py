@@ -54,21 +54,28 @@ async def end_select_chat(msg: Message, db: AsyncSession, state: FSMContext):
     sending_data = SendingData(period=data["period"], chats=data["select_chats"])
     price_in_usd, price_in_btc = await service.get_price(db, sending_data)
     await state.update_data(sending_data=sending_data, price=price_in_btc)
-    text = "Введите рекламную ссылку" if "is_paid" in data else f"Стоимость: {price_in_btc} BTC, {price_in_usd} $. " \
-                                                                f"Введите рекламную ссылку"
+    text = "Введите рекламную ссылку. Ссылка должна начинаться с 'https://'" if "is_paid" in data else \
+        f"Стоимость: {price_in_btc} BTC, {price_in_usd} $." \
+        f"Введите рекламную ссылку. Ссылка должна начинаться с 'https://'"
     await msg.answer(text)
     await state.set_state("get_button_link")
 
 
 async def get_button_link(msg: Message, state: FSMContext):
+    if not msg.text.startswith("https://"):
+        await msg.answer("Ссылка должна начинаться с 'https://'")
+        return
     data = await state.get_data()
     data["sending_data"].btn_link = msg.text
     await state.update_data(sending_data=data["sending_data"])
-    await msg.answer("Введите текст кнопки")
+    await msg.answer("Введите текст кнопки. Не больше 20 символов")
     await state.set_state("get_button_title")
 
 
 async def get_button_title(msg: Message, db: AsyncSession, state: FSMContext):
+    if len(msg.text) > 20:
+        await msg.answer("Текст кнопки должен быть не больше 20 символов. Введите еще раз")
+        return
     data = await state.get_data()
     sending_data = data["sending_data"]
     price = data["price"]

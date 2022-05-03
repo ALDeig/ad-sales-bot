@@ -13,6 +13,7 @@ from tgbot.services.qr_code import qr_link
 
 
 async def btn_buy(call: types.CallbackQuery, state: FSMContext):
+    await call.answer()
     config = call.bot.get("config")
     _, price, period = call.data.split(":")
     payment = Payment(Decimal(price), int(period))
@@ -24,12 +25,14 @@ async def btn_buy(call: types.CallbackQuery, state: FSMContext):
     qr_code = config.request_link.format(address=config.pay.wallet_btc,
                                          amount=price,
                                          message="test")
-    await call.message.answer_photo(photo=qr_link(qr_code))
+    msg_photo = await call.message.answer_photo(photo=qr_link(qr_code))
     await state.set_state("btc")
-    await state.update_data(payment=payment)
+    await state.update_data({"payment": payment, "msg_photo_id": msg_photo.message_id})
 
 
 async def cancel_payment(call: types.CallbackQuery, db: AsyncSession, state: FSMContext):
+    data = await state.get_data()
+    await call.bot.delete_message(call.from_user.id, data["msg_photo_id"])
     await call.message.edit_text("Отменено")
     price = call.data.split(":")[-1]
     await db_queries.delete_sending(db, price)

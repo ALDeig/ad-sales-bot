@@ -13,9 +13,9 @@ def buy_ad():
 
 def select_buy_period():
     kb = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton(text="7 дней", callback_data="7"),
         InlineKeyboardButton(text="30 дней", callback_data="30"),
         InlineKeyboardButton(text="90 дней", callback_data="90"),
-        InlineKeyboardButton(text="7 дней", callback_data="7"),
         InlineKeyboardButton(text="Ввести промокод", callback_data="promo_code")
     )
     return kb
