@@ -17,7 +17,7 @@ def paid_keyboard(price):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Оплатил",
+                    text="Проверить оплату",
                     callback_data=f"paid:{price}"
                 )
             ],
