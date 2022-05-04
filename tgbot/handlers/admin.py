@@ -217,6 +217,16 @@ async def get_file_with_words(msg: Message, state: FSMContext):
     Path(file_with_words.name).unlink()
 
 
+async def cmd_change_ads_message(msg: Message, state: FSMContext):
+    await msg.answer("Введите сообщение")
+    await state.set_state("get_ads_message")
+
+
+async def get_ads_message(msg: Message, db: AsyncSession, state: FSMContext):
+    await db_queries.add_message(db, "ads_message", msg.text)
+    await state.finish()
+
+
 def register_admin(dp: Dispatcher):
     dp.register_message_handler(user_start, commands=["start"], state="*")
     dp.register_message_handler(cmd_add_chat, commands=["add_chat"], is_admin=True)
@@ -239,3 +249,5 @@ def register_admin(dp: Dispatcher):
     dp.register_callback_query_handler(btn_select_ad_for_delete, state="select_ad_for_delete")
     dp.register_message_handler(cmd_forbidden_words, commands=["send_forbidden_words"], is_admin=True)
     dp.register_message_handler(get_file_with_words, state="get_file_with_words", content_types=ContentType.DOCUMENT)
+    dp.register_message_handler(cmd_change_ads_message, commands=["ads_message"], is_admin=True)
+    dp.register_message_handler(get_ads_message, state="get_ads_message")

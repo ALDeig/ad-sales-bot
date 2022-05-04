@@ -5,7 +5,7 @@ from datetime import datetime
 from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.types import ContentType
-from aiogram.utils.exceptions import BadRequest, MessageCantBeEdited
+from aiogram.utils.exceptions import BadRequest
 from aioredis.client import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,8 +35,9 @@ async def send_ads(redis: Redis, session: AsyncSession, msg: types.Message):
         return
     kb = kb_ads_buttons(sendings)
     await redis.delete(str(msg.chat.id))
+    ads_message = await db_queries.get_message(session, "ads_message")
     try:
-        await msg.answer("Реклама", reply_markup=kb)
+        await msg.answer(ads_message.message if ads_message else "Реклама", reply_markup=kb)
     except BadRequest:
         pass
 
