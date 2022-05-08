@@ -6,7 +6,8 @@ from dateutil.tz import tzutc
 from pydantic import BaseModel
 
 from tgbot.config import Settings
-from tgbot.services.errors import NotConfirmed, NoPaymentFound
+from tgbot.services.errors import NoPaymentFound
+from tgbot.services.datatypes import Prices, Currencies
 
 
 config = Settings()
@@ -22,7 +23,7 @@ class TxRefs(BaseModel):
     spent: bool | None
     spent_by: str | None
     confirmations: int
-    confirmed: datetime  # "2014-05-22T02:56:08Z",
+    confirmed: datetime
     double_spend: bool
 
 
@@ -40,74 +41,51 @@ class AddressDetails(BaseModel):
     tx_url: str
 
 
-# @dataclass
-# class Payment:
-#     amount: int
-#     created: datetime = None
-#     success: bool = False
-#
-#     def create(self):
-#         self.created = datetime.now(tz=tzutc())
-#
-#     def check_payment(self):
-#         details = bs.get_address_details(address=config.pay.wallet_btc, api_key=config.pay.blockcypher_token)
-#         address_details = AddressDetails(**details)
-#         for transaction in address_details.unconfirmed_txrefs:
-#             if transaction.get('value') == self.amount:
-#                 if transaction.get('received') > self.created:
-#                     if transaction.get('confirmations') > 0:
-#                         return True
-#                     else:
-#                         raise NotConfirmed
-#         for transaction in address_details.txrefs:
-#             if transaction.get('value') == self.amount:
-#                 if transaction.get('received') > self.created:
-#                     return True
-#         raise NoPaymentFound
-
 class Payment:
-    def __init__(self, amount: Decimal, period: int):
-        self.amount = amount
-        self.amount_satoshis = amount * 10**8
+    def __init__(self, prices: Prices, period: int, currency: Currencies):
+        self.prices = prices
+        self.currency = currency
         self.period = period
         self.created = None
 
     def create(self):
         self.created = datetime.now(tz=tzutc())
 
+    def get_price_in_currency(self) -> Decimal:
+        prices = {Currencies.btc: self.prices.btc, Currencies.ltc: self.prices.ltc, Currencies.dash: self.prices.dash}
+        return prices[self.currency]
+
+    def _choose_currency_url(self) -> str:
+        urls = {
+            Currencies.btc: f"https://api.blockcypher.com/v1/btc/main/addrs/{config.pay.wallet_btc}",
+            Currencies.ltc: f"https://api.blockcypher.com/v1/ltc/main/addrs/{config.pay.wallet_ltc}",
+            Currencies.dash: f"https://api.blockcypher.com/v1/dash/main/addrs/{config.pay.wallet_dash}"
+        }
+        return urls[self.currency]
+
     async def check_payment(self):
+        url = self._choose_currency_url()
+        amount_satoshis = self.get_price_in_currency() * 10**8
         async with httpx.AsyncClient() as client:
-            details = await client.get(
-                url=f"https://api.blockcypher.com/v1/btc/main/addrs/{config.pay.wallet_btc}",
-                params={"token": config.pay.blockcypher_token}
-            )
+            details = await client.get(url=url, params={"token": config.pay.blockcypher_token})
         address_details = AddressDetails.parse_obj(details.json())
         if address_details.txrefs:
             for transaction in address_details.txrefs:
-                if transaction.value == self.amount_satoshis:
+                if transaction.value == amount_satoshis:
                     if transaction.confirmed > self.created:
                         if transaction.confirmations > 0:
                             return True
-                        else:
-                            raise NotConfirmed
-            for transaction in address_details.txrefs:
-                if transaction.value == self.amount_satoshis:
-                    if transaction.get('received') > self.created:
-                        return True
-            raise NoPaymentFound
+        raise NoPaymentFound
 
-# token = "568930c4f62142808ad33057d04df0cf"
-# address = "1Bh2fNePKQyUTEPTKWynfs2zmdH3UUck2z"
-# WALLET_BTC="a46e0077c4b343e7aec6e136d4351359"
-# WALLET_BTC="bc1qtlyctnfqx2ctw3wwthur2uytuhecd9qkdv2l0l"
-# # BLOCKCYPHER_TOKEN="bc1qtlyctnfqx2ctw3wwthur2uytuhecd9qkdv2l0l"
-# BLOCKCYPHER_TOKEN="7019c3875d084d0480eaafe7101f8f7c"
-# # a = httpx.get("http://api.blockcypher.com/v1/btc/main", params={"token": BLOCKCYPHER_TOKEN})
-# # print(a.text)
-# # # # print(a.text)
-# a = httpx.get(f"https://api.blockcypher.com/v1/btc/main/addrs/{WALLET_BTC}", params={"token": BLOCKCYPHER_TOKEN})
-# print(a.text)
-# a = AddressDetails.parse_obj(a.json())
-# print(a)
-# link = f"bitcoin:{address}?amount=100&label=ghbdtn"
-# print(a)
+    def __repr__(self):
+        return f"prices={self.prices}\ncurrency={self.currency}\nperiod={self.period}\ncreated={self.created}"
+
+
+"""
+Bitcoin	Main	api.blockcypher.com/v1/btc/main
+Bitcoin	Testnet3	api.blockcypher.com/v1/btc/test3
+Dash	Main	api.blockcypher.com/v1/dash/main
+Dogecoin	Main	api.blockcypher.com/v1/doge/main
+Litecoin	Main	api.blockcypher.com/v1/ltc/main
+BlockCypher	Test	api.blockcypher.com/v1/bcy/test
+"""

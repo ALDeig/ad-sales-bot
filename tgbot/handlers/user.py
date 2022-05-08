@@ -51,11 +51,12 @@ async def select_chat(call: CallbackQuery, state: FSMContext):
 async def end_select_chat(msg: Message, db: AsyncSession, state: FSMContext):
     await msg.answer("Готово", reply_markup=ReplyKeyboardRemove())
     data = await state.get_data()
+    config = msg.bot.get("config")
     sending_data = SendingData(period=data["period"], chats=data["select_chats"])
-    price_in_usd, price_in_btc = await service.get_price(db, sending_data)
-    await state.update_data(sending_data=sending_data, price=price_in_btc)
+    prices = await service.get_prices(db, sending_data, config.pay.alpha_vantage_key)
+    await state.update_data(sending_data=sending_data, prices=prices)
     text = "Введите рекламную ссылку. Ссылка должна начинаться с 'https://'" if "is_paid" in data else \
-        f"Стоимость: {price_in_btc} BTC, {price_in_usd} $." \
+        f"Стоимость:\nUSD: {prices.usd}\nBTC: {prices.btc}\nLTC: {prices.ltc}\nDASH: {prices.dash}.\n\n" \
         f"Введите рекламную ссылку. Ссылка должна начинаться с 'https://'"
     await msg.answer(text)
     await state.set_state("get_button_link")
@@ -72,22 +73,17 @@ async def get_button_link(msg: Message, state: FSMContext):
     await state.set_state("get_button_title")
 
 
-async def get_button_title(msg: Message, db: AsyncSession, state: FSMContext):
+async def get_button_title(msg: Message, state: FSMContext):
     if len(msg.text) > 20:
         await msg.answer("Текст кнопки должен быть не больше 20 символов. Введите еще раз")
         return
     data = await state.get_data()
     sending_data = data["sending_data"]
-    price = data["price"]
     sending_data.btn_title = msg.text
-    if data.get("is_paid", None):
-        await db_queries.add_sendings(db, sending_data, str(price), msg.from_user.id, is_paid=True)
-        await msg.answer("Готово")
-        await state.finish()
-        return
-    kb = kb_payments.buy_keyboard(price, sending_data.period.value)
-    await msg.answer("Купите рассылки", reply_markup=kb)
-    await state.reset_state(with_data=False)
+    await state.update_data(sending_data=sending_data)
+    kb = kb_payments.choose_currency()
+    await msg.answer("Выберите валюту оплаты", reply_markup=kb)
+    await state.set_state("choose_currency")
 
 
 def register_user(dp: Dispatcher):

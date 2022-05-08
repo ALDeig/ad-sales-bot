@@ -1,63 +1,106 @@
-from decimal import Decimal
+import logging
 
 from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.utils.markdown import hcode
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tgbot.services import db_queries
-from tgbot.services.errors import NotConfirmed, NoPaymentFound
 from tgbot.keyboards import kb_payments
-from tgbot.services.payments import Payment
+from tgbot.services import db_queries
+from tgbot.services.datatypes import Currencies
+from tgbot.services.errors import NoPaymentFound
 from tgbot.services.qr_code import qr_link
+from tgbot.services.payments import Payment
+from tgbot.services.service import create_link_for_qr_code
 
 
-async def btn_buy(call: types.CallbackQuery, state: FSMContext):
-    await call.answer()
+async def get_selected_currency(call: types.CallbackQuery, db: AsyncSession, state: FSMContext):
+    await call.answer(cache_time=20)
+    data = await state.get_data()
+    sending_data = data["sending_data"]
+    currencies = {"btc": Currencies.btc, "ltc": Currencies.ltc, "dash": Currencies.dash}
+    payment = Payment(data["prices"], data["sending_data"].period.value, currencies[call.data])
+    if data.get("is_paid", None):
+        await db_queries.add_sendings(db, data["sending_data"], str(payment.get_price_in_currency()),
+                                      call.from_user.id, is_paid=True)
+        await call.message.answer("Готово")
+        await state.finish()
+        return
+    sending_data.price = payment.get_price_in_currency()
+    payment = Payment(data["prices"], data["sending_data"].period.value, currencies[call.data])
+    # await state.update_data({"payment": payment, "sending_data": sending_data})
+    # kb = kb_payments.buy_keyboard(sending_data.price, sending_data.period.value)
+    # await call.message.answer("Купите рассылки", reply_markup=kb)
+    # await state.reset_state(with_data=False)
+
+
+# async def btn_buy(call: types.CallbackQuery, state: FSMContext):
+#     await call.answer(cache_time=20)
+#     data = await state.get_data()
+#     payment = data["payment"]
     config = call.bot.get("config")
-    _, price, period = call.data.split(":")
-    payment = Payment(Decimal(price), int(period))
+    wallets = {Currencies.btc: config.pay.wallet_btc, Currencies.ltc: config.pay.wallet_ltc,
+               Currencies.dash: config.pay.wallet_dash}
     payment.create()
-    kb = kb_payments.paid_keyboard(str(price))
-    await call.message.answer(f"Оплатите {price} BTC по адресу:\n" +
-                              hcode(config.pay.wallet_btc),
+    # price = payment.get_price_in_currency()
+    kb = kb_payments.paid_keyboard(sending_data.price, payment.currency)
+    await call.message.answer(f"Оплатите {sending_data.price} {payment.currency.value} по адресу:\n" +
+                              hcode(wallets[payment.currency]),
                               reply_markup=kb)
-    qr_code = config.request_link.format(address=config.pay.wallet_btc,
-                                         amount=price,
-                                         message="test")
+    qr_code = create_link_for_qr_code(sending_data.price, wallets[payment.currency], payment.currency)
     msg_photo = await call.message.answer_photo(photo=qr_link(qr_code))
-    await state.set_state("btc")
+    await state.set_state("pay")
     await state.update_data({"payment": payment, "msg_photo_id": msg_photo.message_id})
 
 
-async def cancel_payment(call: types.CallbackQuery, db: AsyncSession, state: FSMContext):
+async def cancel_payment(call: types.CallbackQuery, state: FSMContext):
+    await call.answer()
     data = await state.get_data()
     await call.bot.delete_message(call.from_user.id, data["msg_photo_id"])
-    await call.message.edit_text("Отменено")
-    price = call.data.split(":")[-1]
-    await db_queries.delete_sending(db, price)
+    kb = kb_payments.cancel_or_change_currency()
+    await call.message.edit_text("Отменить оплату или выбрать другую валюту?", reply_markup=kb)
+    await state.set_state("cancel")
+
+
+async def btn_change_currency(call: types.CallbackQuery, state: FSMContext):
+    await call.answer()
+    kb = kb_payments.choose_currency()
+    await call.message.answer("Выберите валюту", reply_markup=kb)
+    await state.set_state("choose_currency")
+
+
+async def btn_true_cancel(call: types.CallbackQuery, state: FSMContext):
+    await call.answer()
+    await call.message.answer("Готово")
     await state.finish()
+    # price = call.data.split(":")[-1]
+    # await db_queries.delete_sending(db, price)
+    # await state.finish()
 
 
 async def approve_payment(call: types.CallbackQuery, db: AsyncSession, state: FSMContext):
+    await call.answer(cache_time=10)
     data = await state.get_data()
     payment: Payment = data.get("payment")
+    # logging.info(f"{payment=}")
+    # logging.info(f"{data['sending_data']=}")
     try:
         await payment.check_payment()
-    except NotConfirmed:
-        await call.message.answer("Транзакция найдена. Но еще не подтверждена. Попробуйте позже")
-        return
     except NoPaymentFound:
         await call.message.answer("Транзакция не найдена.")
         return
     else:
         await call.message.answer("Успешно оплачено")
-        await db_queries.update_expirations(db, payment.period, str(payment.amount))
+        await db_queries.add_sendings(db, data["sending_data"], str(payment.get_price_in_currency()),
+                                      call.from_user.id, True)
     await call.message.delete_reply_markup()
     await state.finish()
 
 
 def register_payment(dp: Dispatcher):
-    dp.register_callback_query_handler(btn_buy, text_contains="buy")
-    dp.register_callback_query_handler(cancel_payment, text_contains="cancel", state="btc")
-    dp.register_callback_query_handler(approve_payment, text_contains="paid", state="btc")
+    dp.register_callback_query_handler(get_selected_currency, state="choose_currency")
+    # dp.register_callback_query_handler(btn_buy, text_contains="buy")
+    dp.register_callback_query_handler(cancel_payment, text_contains="cancel", state="pay")
+    dp.register_callback_query_handler(btn_true_cancel, text="true_cancel", state="cancel")
+    dp.register_callback_query_handler(btn_change_currency, text="change_currency", state="cancel")
+    dp.register_callback_query_handler(approve_payment, text_contains="paid", state="pay")

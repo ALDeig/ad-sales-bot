@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from decimal import Decimal
 from enum import Enum
 
 
@@ -6,6 +7,20 @@ class Period(Enum):
     week = 7
     month = 30
     three_month = 90
+
+
+class Currencies(Enum):
+    btc = "BTC"
+    ltc = "LTC"
+    dash = "DASH"
+
+
+@dataclass
+class Prices:
+    usd: Decimal | None = None
+    btc: Decimal | None = None
+    ltc: Decimal | None = None
+    dash: Decimal | None = None
 
 
 @dataclass

@@ -12,13 +12,13 @@ def buy_keyboard(price, period):
     return keyboard
 
 
-def paid_keyboard(price):
+def paid_keyboard(price, currency):
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text="Проверить оплату",
-                    callback_data=f"paid:{price}"
+                    callback_data=f"paid:{price}:{currency}"
                 )
             ],
             [
@@ -27,6 +27,27 @@ def paid_keyboard(price):
                     callback_data=f"cancel:{price}"
                 )
             ],
+        ]
+    )
+    return kb
+
+
+def choose_currency():
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="BTC", callback_data="btc")],
+            [InlineKeyboardButton(text="Litecoin", callback_data="ltc")],
+            [InlineKeyboardButton(text="Dash", callback_data="dash")]
+        ]
+    )
+    return kb
+
+
+def cancel_or_change_currency():
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Отменить", callback_data="true_cancel")],
+            [InlineKeyboardButton(text="Изменить валюту", callback_data="change_currency")]
         ]
     )
     return kb

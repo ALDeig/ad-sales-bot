@@ -1,12 +1,12 @@
 from aiogram import Dispatcher
 from aiogram.dispatcher import FSMContext
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove, ContentType, LabeledPrice, PreCheckoutQuery
+from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tgbot.keyboards import kb_user, kb_payments
+from tgbot.keyboards import kb_user
 from tgbot.services import db_queries
 from tgbot.services import service
-from tgbot.services.datatypes import Period, SendingData
+from tgbot.services.datatypes import Period
 
 
 async def btn_promo_code(call: CallbackQuery, state: FSMContext):
