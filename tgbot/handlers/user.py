@@ -69,13 +69,13 @@ async def get_button_link(msg: Message, state: FSMContext):
     data = await state.get_data()
     data["sending_data"].btn_link = msg.text
     await state.update_data(sending_data=data["sending_data"])
-    await msg.answer("Введите текст кнопки. Не больше 20 символов")
+    await msg.answer("Введите текст кнопки. Не больше 35 символов")
     await state.set_state("get_button_title")
 
 
 async def get_button_title(msg: Message, state: FSMContext):
-    if len(msg.text) > 20:
-        await msg.answer("Текст кнопки должен быть не больше 20 символов. Введите еще раз")
+    if len(msg.text) > 35:
+        await msg.answer("Текст кнопки должен быть не больше 35 символов. Введите еще раз")
         return
     data = await state.get_data()
     sending_data = data["sending_data"]
