@@ -1,3 +1,4 @@
+import logging
 import typing
 
 from aiogram.dispatcher.filters import BoundFilter
@@ -25,4 +26,17 @@ class GroupFilter(BoundFilter):
     async def check(self, obj):
         if self.is_group is None:
             return True
+        logging.info(obj.chat.type)
         return obj.chat.type in ("group", "supergroup")
+
+
+class PrivateFilter(BoundFilter):
+    key = "is_private"
+
+    def __init__(self, is_private: bool | None = None):
+        self.is_private = is_private
+
+    async def check(self, obj):
+        if self.is_private is None:
+            return True
+        return obj.chat.type == "private"

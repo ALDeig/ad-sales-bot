@@ -228,7 +228,7 @@ async def get_ads_message(msg: Message, db: AsyncSession, state: FSMContext):
 
 
 def register_admin(dp: Dispatcher):
-    dp.register_message_handler(user_start, commands=["start"], state="*")
+    dp.register_message_handler(user_start, commands=["start"], state="*", is_private=True)
     dp.register_message_handler(cmd_add_chat, commands=["add_chat"], is_admin=True)
     dp.register_callback_query_handler(btn_add_chat, lambda call: call.data.startswith("add"))
     dp.register_message_handler(get_amount_posts, state="get_amount_posts")

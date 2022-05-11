@@ -10,7 +10,7 @@ from aiogram.types import BotCommand, BotCommandScopeChat
 from aiogram.utils.exceptions import ChatNotFound
 
 from tgbot.config import Settings
-from tgbot.filters.admin import AdminFilter, GroupFilter
+from tgbot.filters.admin import AdminFilter, GroupFilter, PrivateFilter
 from tgbot.handlers.admin import register_admin
 from tgbot.handlers.group import register_group
 from tgbot.handlers.payments import register_payment
@@ -29,6 +29,7 @@ def register_all_middlewares(dp):
 def register_all_filters(dp):
     dp.filters_factory.bind(AdminFilter)
     dp.filters_factory.bind(GroupFilter)
+    dp.filters_factory.bind(PrivateFilter)
 
 
 def register_all_handlers(dp):

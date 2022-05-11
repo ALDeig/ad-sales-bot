@@ -5,7 +5,7 @@ from datetime import datetime
 from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.types import ContentType
-from aiogram.utils.exceptions import BadRequest
+from aiogram.utils.exceptions import BadRequest, MessageToDeleteNotFound
 from aioredis.client import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -99,7 +99,10 @@ async def get_message_in_group(msg: types.Message, db: AsyncSession, state: FSMC
     await asyncio.sleep(30)
     data = await state.get_data()
     if data.get("status") is None:
-        await new_message.delete()
+        try:
+            await new_message.delete()
+        except MessageToDeleteNotFound:
+            pass
     await state.finish()
 
 

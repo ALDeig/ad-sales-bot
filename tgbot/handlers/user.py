@@ -51,6 +51,9 @@ async def select_chat(call: CallbackQuery, state: FSMContext):
 async def end_select_chat(msg: Message, db: AsyncSession, state: FSMContext):
     await msg.answer("Готово", reply_markup=ReplyKeyboardRemove())
     data = await state.get_data()
+    if not data["select_chats"]:
+        await msg.answer("Вы не выбрил ни одного чата. Продолжите выбор или нажмите /start")
+        return
     config = msg.bot.get("config")
     sending_data = SendingData(period=data["period"], chats=data["select_chats"])
     prices = await service.get_prices(db, sending_data, config.pay.alpha_vantage_key)
@@ -87,7 +90,7 @@ async def get_button_title(msg: Message, state: FSMContext):
 
 
 def register_user(dp: Dispatcher):
-    dp.register_message_handler(user_start, commands=["start"], state="*")
+    dp.register_message_handler(user_start, commands=["start"], state="*", is_private=True)
     dp.register_callback_query_handler(btn_buy_ad, lambda call: call.data == "buy_ad")
     dp.register_callback_query_handler(select_period, state="select_period")
     dp.register_callback_query_handler(select_chat, state="select_chat")
