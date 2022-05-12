@@ -75,7 +75,7 @@ async def check_group_admin(msg: types.Message):
 
 
 async def get_message_in_group(msg: types.Message, db: AsyncSession, state: FSMContext):
-    await check_group_admin(msg)
+    # await check_group_admin(msg)
     redis = msg.bot.get("redis")
     if msg.from_user.username == "GroupAnonymousBot" or await check_group_admin(msg):
         result_check_count_message = await check_count_messages(redis, db, str(msg.chat.id))
