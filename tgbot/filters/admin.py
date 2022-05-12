@@ -26,7 +26,6 @@ class GroupFilter(BoundFilter):
     async def check(self, obj):
         if self.is_group is None:
             return True
-        logging.info(obj.chat.type)
         return obj.chat.type in ("group", "supergroup")
 
 

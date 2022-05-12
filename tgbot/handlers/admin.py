@@ -224,6 +224,7 @@ async def cmd_change_ads_message(msg: Message, state: FSMContext):
 
 async def get_ads_message(msg: Message, db: AsyncSession, state: FSMContext):
     await db_queries.add_message(db, "ads_message", msg.text)
+    await msg.answer("Готово")
     await state.finish()
 
 
