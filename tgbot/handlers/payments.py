@@ -11,7 +11,7 @@ from tgbot.services.datatypes import Currencies
 from tgbot.services.errors import NoPaymentFound
 from tgbot.services.qr_code import qr_link
 from tgbot.services.payments import Payment
-from tgbot.services.service import create_link_for_qr_code
+from tgbot.services.service import create_link_for_qr_code, check_payment
 
 
 async def get_selected_currency(call: types.CallbackQuery, db: AsyncSession, state: FSMContext):
@@ -80,21 +80,27 @@ async def btn_true_cancel(call: types.CallbackQuery, state: FSMContext):
 
 async def approve_payment(call: types.CallbackQuery, db: AsyncSession, state: FSMContext):
     await call.answer(cache_time=10)
+    scheduler = call.bot.get("scheduler")
     data = await state.get_data()
     payment: Payment = data.get("payment")
     # logging.info(f"{payment=}")
     # logging.info(f"{data['sending_data']=}")
-    try:
-        await payment.check_payment()
-    except NoPaymentFound:
-        await call.message.answer("Транзакция не найдена.")
-        return
-    else:
-        await call.message.answer("Успешно оплачено")
-        await db_queries.add_sendings(db, data["sending_data"], str(payment.get_price_in_currency()),
-                                      call.from_user.id, True)
     await call.message.delete_reply_markup()
+    await call.message.answer("Идет автоматическая проверка платежа, как только транзакция подтвердиться вам "
+                              "придет уведомление")
     await state.finish()
+    await check_payment(call, payment, data["sending_data"], db)
+    # try:
+    #     await payment.check_payment()
+    # except NoPaymentFound:
+    #     await call.message.answer("Транзакция не найдена.")
+    #     return
+    # else:
+    #     await call.message.answer("Успешно оплачено")
+    #     await db_queries.add_sendings(db, data["sending_data"], str(payment.get_price_in_currency()),
+    #                                   call.from_user.id, True)
+    # await call.message.delete_reply_markup()
+    # await state.finish()
 
 
 def register_payment(dp: Dispatcher):

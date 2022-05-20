@@ -109,10 +109,12 @@ async def get_sendings_by_chat(session: AsyncSession, chat_id: str) -> list[Send
 
 
 async def get_sendings_by_user(session: AsyncSession, user_id: str) -> list[Sending]:
-    prices = await session.execute(sa.select(sa.distinct(Sending.price)).where(Sending.user_id == user_id))
+    # prices = await session.execute(sa.select(sa.distinct(Sending.price)).where(Sending.user_id == user_id))
+    prices = await session.execute(sa.select(sa.distinct(Sending.price)))
     result = []
     for price in prices:
-        sql = sa.select(Sending).where(Sending.price == price[0], Sending.user_id == user_id).limit(1)
+        # sql = sa.select(Sending).where(Sending.price == price[0], Sending.user_id == user_id).limit(1)
+        sql = sa.select(Sending).where(Sending.price == price[0]).limit(1)
         sending = await session.execute(sql)
         result.append(sending.scalar())
     return result

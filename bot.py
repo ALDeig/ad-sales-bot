@@ -97,6 +97,7 @@ async def main():
     register_all_handlers(dp)
     await set_commands(dp, config.tg.admins)
     # await scheduler.update_sending_on_start_bot(bot, session_factory)
+    bot["scheduler"] = scheduler
     scheduler.creat_jobs(session_factory, config.tg.admins)
 
     # start

@@ -2,6 +2,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeybo
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tgbot.models.tables import Chat
+from tgbot.services.datatypes import Period
 
 
 def buy_ad():
@@ -21,20 +22,32 @@ def select_buy_period():
     return kb
 
 
-def select_chat_for_buy(chats: list[Chat], select_chat: list = None):
+def select_chat_for_buy(chats: list[Chat], period: Period, select_chat: list = None):
     if select_chat is None:
         select_chat = []
     select_icon = {"checked": "✔", "unchecked": "✖"}
     kb = InlineKeyboardMarkup(row_width=1)
     for chat in chats:
+        chat_prices = {
+            Period.week: chat.price_week, Period.month: chat.price_month,
+            Period.three_month: chat.price_three_month
+        }
         icon = select_icon["checked"] if chat.chat_id in select_chat else select_icon["unchecked"]
         kb.add(
-            InlineKeyboardButton(text=f"{icon} {chat.name}", callback_data=chat.chat_id)
+            InlineKeyboardButton(
+                text=f"{icon} {chat.name} / {chat_prices[period]} USD",
+                callback_data=f"{chat.chat_id}:{chat_prices[period]}"
+            )
         )
     return kb
 
 
-end_select_chat = ReplyKeyboardMarkup([[KeyboardButton(text="Завершить выбор")]], resize_keyboard=True)
+end_select_chat = ReplyKeyboardMarkup([
+    [KeyboardButton(text="Завершить выбор")],
+    [KeyboardButton(text="Назад")]
+],resize_keyboard=True)
+
+cancel = ReplyKeyboardMarkup([[KeyboardButton(text="Назад")]], resize_keyboard=True)
 
 
 def select_amount_posts():

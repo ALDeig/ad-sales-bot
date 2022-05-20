@@ -1,13 +1,18 @@
+import asyncio
+import json
 import random
 import re
 from decimal import Decimal
 from string import ascii_letters
 
 import httpx
+from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tgbot.services import db_queries
 from tgbot.services.datatypes import ChatData, SendingData, Period, Prices, Currencies
+from tgbot.services.errors import NoPaymentFound
+from tgbot.services.payments import Payment
 
 
 def generate_promo_code(len_code: int) -> str:
@@ -57,16 +62,28 @@ def get_random_change_price(price: Decimal) -> Decimal:
     return result
 
 
+async def _get_price_in_usd(session: AsyncSession, chat: str, period: Period) -> int:
+    data_chat = await db_queries.get_chat(session, chat)
+    chat_prices = {
+        Period.week: data_chat.price_week, Period.month: data_chat.price_month,
+        Period.three_month: data_chat.price_three_month
+    }
+    return chat_prices[period]
+
+
 async def get_prices(session: AsyncSession, sending_data: SendingData, api_key) -> Prices:
     """Считает цену в долларах и других валютах. Возвращает dataclass со всеми ценами"""
     prices = Prices(usd=Decimal(0))
+    # chats_info = []
     for chat in sending_data.chats:
-        data_chat = await db_queries.get_chat(session, chat)
-        chat_prices = {
-            Period.week: data_chat.price_week, Period.month: data_chat.price_month,
-            Period.three_month: data_chat.price_three_month
-        }
-        prices.usd += chat_prices[sending_data.period]
+        # data_chat = await db_queries.get_chat(session, chat)
+        # chat_prices = {
+        #     Period.week: data_chat.price_week, Period.month: data_chat.price_month,
+        #     Period.three_month: data_chat.price_three_month
+        # }
+        price = await _get_price_in_usd(session, chat, sending_data.period)
+        prices.usd += price
+        # chats_info.append((data_chat.chat_id, data_chat.name, chat_prices[sending_data.period]))
     dict_prices = {}
     for currency in Currencies:
         tmp_price = await usd_in_crypto_currency(prices.usd, currency, api_key)
@@ -94,3 +111,33 @@ def create_link_for_qr_code(price: Decimal, address: str, currency: Currencies) 
     """Формирует ссылку для qr-code"""
     names_currency = {Currencies.btc: "bitcoin", Currencies.ltc: "litecoin", Currencies.dash: "dash"}
     return f"{names_currency[currency]}:{address}?amount={price}&label=test"
+
+
+def _save_payment_for_statistic(currency: str, price: Decimal):
+    with open("documents/statistic.json", "r") as file:
+        data = json.load(file)
+    if currency not in data:
+        data[currency] = str(price)
+    else:
+        data[currency] = str(Decimal(data[currency]) + price)
+    with open("documents/statistic.json", "w") as file:
+        json.dump(data, file, indent=4, ensure_ascii=False)
+
+
+async def check_payment(call: CallbackQuery, payment: Payment, sending_data: SendingData, session: AsyncSession):
+    """Проверяет оплату, в случае успеха добавляет рассылку в базу и уведомляет пользователя"""
+    for _ in range(24):
+        try:
+            await payment.check_payment()
+        except NoPaymentFound:
+            print("Оплата не прошла")
+            await asyncio.sleep(5 * 60)
+            continue
+        else:
+            await call.message.answer("Успешно оплачено")
+            await db_queries.add_sendings(session, sending_data, str(payment.get_price_in_currency()),
+                                          call.from_user.id, True)
+            _save_payment_for_statistic(payment.currency.value, payment.get_price_in_currency())
+            return
+    await call.message.answer("Время для оплаты истекло")
+
