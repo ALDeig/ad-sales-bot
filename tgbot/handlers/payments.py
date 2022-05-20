@@ -104,9 +104,10 @@ async def approve_payment(call: types.CallbackQuery, db: AsyncSession, state: FS
 
 
 def register_payment(dp: Dispatcher):
+    dp.register_callback_query_handler(btn_true_cancel, text="true_cancel", state="choose_currency")
     dp.register_callback_query_handler(get_selected_currency, state="choose_currency")
     # dp.register_callback_query_handler(btn_buy, text_contains="buy")
     dp.register_callback_query_handler(cancel_payment, text_contains="cancel", state="pay")
-    dp.register_callback_query_handler(btn_true_cancel, text="true_cancel", state="choose_currency")
+    dp.register_callback_query_handler(btn_true_cancel, text="true_cancel", state="cancel")
     dp.register_callback_query_handler(btn_change_currency, text="change_currency", state="cancel")
     dp.register_callback_query_handler(approve_payment, text_contains="paid", state="pay")
