@@ -158,7 +158,10 @@ async def add_group_user(session: AsyncSession, user_id: int, allow_ads: bool, c
             check_time=check_time
         )
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        pass
 
 
 async def get_group_user(session: AsyncSession, user_id: int) -> GroupUser | None:
