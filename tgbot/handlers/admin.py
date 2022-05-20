@@ -180,7 +180,8 @@ async def cmd_delete_my_ads(msg: Message, db: AsyncSession, state: FSMContext):
     for my_ad in my_ads:
         kb = kb_admin.select_sending(my_ad)
         sent_msg = await msg.answer(
-            f"Название кнопки: {my_ad.button_title}\nСсылка: {my_ad.button_link}", reply_markup=kb
+            f"Название кнопки: {my_ad.button_title}\nСсылка: {my_ad.button_link}",
+            reply_markup=kb, disable_web_page_preview=True
         )
         messages.append(sent_msg.message_id)
     await state.update_data(messages=messages)
