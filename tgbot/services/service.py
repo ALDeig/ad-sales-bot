@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import random
 import re
@@ -15,19 +16,26 @@ from tgbot.services.errors import NoPaymentFound
 from tgbot.services.payments import Payment
 
 
-def generate_promo_code(len_code: int) -> str:
+def generate_promo_code(period: str, id_user: int) -> str:
     """Генерирует новый промокод"""
-    promo_code = "".join(random.choice(ascii_letters) for _ in range(len_code))
-    return promo_code
+    promo_code_salt = "".join(random.choice(ascii_letters) for _ in range(8))
+    promo_code = f"{period}:{id_user}:{promo_code_salt}"
+    promo_code_encoded = base64.b64encode(promo_code.encode())
+    return promo_code_encoded.decode()
 
 
-async def check_promo_code(db: AsyncSession, promo_code: str) -> bool:
+def _decode_promo_code(decoded_promo_code: str) -> tuple:
+    promo_code = base64.b64decode(decoded_promo_code.encode()).decode()
+    period, id_user, _ = promo_code.split(":")
+    return period, id_user
+
+
+async def check_promo_code(db: AsyncSession, promo_code: str) -> tuple | None:
     """Проверяет промокод"""
     right_promo_code = await db_queries.get_message(db, "promo_code")
     if right_promo_code and promo_code == right_promo_code.message:
         await db_queries.delete_message(db, "promo_code")
-        return True
-    return False
+        return _decode_promo_code(promo_code)
 
 
 async def add_chat(db: AsyncSession, data: ChatData):

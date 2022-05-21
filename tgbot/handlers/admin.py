@@ -121,16 +121,24 @@ async def select_group_for_delete(call: CallbackQuery, db, state: FSMContext):
 async def update_chat(msg: Message, db, state: FSMContext):
     chats = await get_chats(db)
     kb = kb_admin.select_chat(chats)
+    await state.update_data(chats=chats)
     await msg.answer("Выберите чат", reply_markup=kb)
     await state.set_state("select_chat_for_update")
 
 
 async def select_chat_for_update(call: CallbackQuery, state: FSMContext):
     await call.answer()
+    data = await state.get_data()
+    current_chat = list(filter(lambda chat: chat.chat_id == call.data, data["chats"]))[0]
     chat_data = ChatData()
     chat_data.chat_id = call.data
     await state.update_data(chat_data=chat_data)
     amount_members = await call.bot.get_chat_members_count(call.data)
+    await call.message.answer(
+        f"<b>Текущие данные</b>\nКоличество постов: {current_chat.amount_posts}\n"
+        f"Цена за неделю: {current_chat.price_week}\n"
+        f"Цена за месяц: {current_chat.price_month}\nЦена за 3 месяца: {current_chat.price_three_month}"
+    )
     await call.message.answer(
         f"Количество участников в группе - {amount_members}. Через какое количество постов должна появляться реклама?"
     )
@@ -148,10 +156,22 @@ async def get_text_for_start_message(msg: Message, db, state: FSMContext):
     await state.finish()
 
 
-async def cmd_get_promo_code(msg: Message, db: AsyncSession):
-    promo_code = service.generate_promo_code(8)
-    await msg.answer(promo_code)
+async def cmd_get_promo_code(msg: Message, state: FSMContext):
+    kb = kb_user.select_buy_period(True)
+    await msg.answer("Выберите период", reply_markup=kb)
+    await state.set_state("select_period_for_promo_code")
+    # promo_code = service.generate_promo_code(8)
+    # await msg.answer(promo_code)
+    # await add_message(db, "promo_code", promo_code)
+
+
+async def btn_select_period_for_promo_code(call: CallbackQuery, db: AsyncSession, state: FSMContext):
+    await call.answer()
+    print(call.data)
+    promo_code = service.generate_promo_code(call.data, call.from_user.id)
+    await call.message.answer(promo_code)
     await add_message(db, "promo_code", promo_code)
+    await state.finish()
 
 
 async def cmd_add_group_user(msg: Message, state: FSMContext):
@@ -180,7 +200,9 @@ async def cmd_delete_my_ads(msg: Message, db: AsyncSession, state: FSMContext):
     for my_ad in my_ads:
         kb = kb_admin.select_sending(my_ad)
         sent_msg = await msg.answer(
-            f"Название кнопки: {my_ad.button_title}\nСсылка: {my_ad.button_link}",
+            f"Дата покупки: {my_ad.created}\nСрок рекламы: {my_ad.expiration}\n"
+            f"Название кнопки: {my_ad.button_title}\nСсылка: {my_ad.button_link}\n"
+            f"Цена: {my_ad.price}\nПользователь: {my_ad.user_id}",
             reply_markup=kb, disable_web_page_preview=True
         )
         messages.append(sent_msg.message_id)
@@ -231,6 +253,7 @@ async def get_ads_message(msg: Message, db: AsyncSession, state: FSMContext):
 
 def register_admin(dp: Dispatcher):
     dp.register_message_handler(user_start, commands=["start"], state="*", is_private=True)
+    dp.register_message_handler(user_start, text="В начало", state="*", is_private=True)
     dp.register_message_handler(cmd_add_chat, commands=["add_chat"], state="*", is_admin=True)
     dp.register_message_handler(cmd_delete_chat, commands=["delete_chat"], state="*", is_admin=True)
     dp.register_message_handler(update_chat, commands=["edit_chat"], state="*", is_admin=True)
@@ -248,6 +271,7 @@ def register_admin(dp: Dispatcher):
     dp.register_callback_query_handler(select_group_for_delete, state="select_chat_for_delete")
     dp.register_callback_query_handler(select_chat_for_update, state="select_chat_for_update")
     dp.register_message_handler(get_text_for_start_message, state="get_text_for_start_message")
+    dp.register_callback_query_handler(btn_select_period_for_promo_code, state="select_period_for_promo_code")
     dp.register_message_handler(get_file_with_group_user, state="get_file_group_user",
                                 content_types=ContentType.DOCUMENT)
     dp.register_callback_query_handler(btn_select_ad_for_delete, state="select_ad_for_delete")

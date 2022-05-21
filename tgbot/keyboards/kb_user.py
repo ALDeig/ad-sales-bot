@@ -12,13 +12,14 @@ def buy_ad():
     return kb
 
 
-def select_buy_period():
+def select_buy_period(for_promo_code: bool | None = None):
     kb = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton(text="7 дней", callback_data="7"),
         InlineKeyboardButton(text="30 дней", callback_data="30"),
         InlineKeyboardButton(text="90 дней", callback_data="90"),
-        InlineKeyboardButton(text="Ввести промокод", callback_data="promo_code")
     )
+    if for_promo_code is None:
+        kb.add(InlineKeyboardButton(text="Ввести промокод", callback_data="promo_code"))
     return kb
 
 
@@ -44,10 +45,16 @@ def select_chat_for_buy(chats: list[Chat], period: Period, select_chat: list = N
 
 end_select_chat = ReplyKeyboardMarkup([
     [KeyboardButton(text="Завершить выбор")],
-    [KeyboardButton(text="Назад")]
+    [KeyboardButton(text="Назад")],
+    [KeyboardButton(text="В начало")]
 ],resize_keyboard=True)
 
-cancel = ReplyKeyboardMarkup([[KeyboardButton(text="Назад")]], resize_keyboard=True)
+cancel_back = ReplyKeyboardMarkup([
+    [KeyboardButton(text="Назад")],
+    [KeyboardButton(text="В начало")]
+], resize_keyboard=True)
+
+cancel = ReplyKeyboardMarkup([[KeyboardButton(text="В начало")]], resize_keyboard=True)
 
 
 def select_amount_posts():
