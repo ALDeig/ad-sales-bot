@@ -204,7 +204,7 @@ async def cmd_delete_my_ads(msg: Message, db: AsyncSession, state: FSMContext):
         sent_msg = await msg.answer(
             f"Дата покупки: {ad.created}\nСрок рекламы: {ad.expiration}\n"
             f"Название кнопки: {ad.button_title}\nСсылка: {ad.button_link}\nМетод оплаты: {ad.currency}\n"
-            f"Цена: {ad.price_in_usd}\nПользователь: {ad.user_id}\nЧаты:\n    -{text_chats}\n{promo_code_text}",
+            f"Цена: {ad.price}\nЦена в USD: {ad.price_in_usd}\nПользователь: {ad.user_id}\nЧаты:\n    -{text_chats}\n{promo_code_text}",
             reply_markup=kb, disable_web_page_preview=True
         )
         messages.append(sent_msg.message_id)
