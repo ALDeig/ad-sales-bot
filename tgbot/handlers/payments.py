@@ -29,6 +29,7 @@ async def get_selected_currency(call: types.CallbackQuery, db: AsyncSession, sta
         await state.finish()
         return
     sending_data.price = payment.get_price_in_currency()
+    await state.update_data(sending_data=sending_data)
     payment = Payment(data["prices"], data["sending_data"].period.value, currencies[call.data])
     # await state.update_data({"payment": payment, "sending_data": sending_data})
     # kb = kb_payments.buy_keyboard(sending_data.price, sending_data.period.value)
