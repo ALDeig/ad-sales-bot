@@ -195,14 +195,16 @@ async def get_file_with_group_user(msg: Message, db: AsyncSession, state: FSMCon
 
 
 async def cmd_delete_my_ads(msg: Message, db: AsyncSession, state: FSMContext):
-    my_ads = await db_queries.get_sendings_by_user(db, msg.from_user.id)
+    ads = await db_queries.get_sending_list(db)
     messages = []
-    for my_ad in my_ads:
-        kb = kb_admin.select_sending(my_ad)
+    for price, ad in ads.items():
+        kb = kb_admin.select_sending(price)
+        text_chats = "\n    -".join([chat.name for chat in ad.chats])
+        promo_code_text = f"Промокод оформил: {ad.who_gave_promo_code}" if ad.who_gave_promo_code else ""
         sent_msg = await msg.answer(
-            f"Дата покупки: {my_ad.created}\nСрок рекламы: {my_ad.expiration}\n"
-            f"Название кнопки: {my_ad.button_title}\nСсылка: {my_ad.button_link}\n"
-            f"Цена: {my_ad.price}\nПользователь: {my_ad.user_id}",
+            f"Дата покупки: {ad.created}\nСрок рекламы: {ad.expiration}\n"
+            f"Название кнопки: {ad.button_title}\nСсылка: {ad.button_link}\nМетод оплаты: {ad.currency}\n"
+            f"Цена: {ad.price_in_usd}\nПользователь: {ad.user_id}\nЧаты:\n    -{text_chats}\n{promo_code_text}",
             reply_markup=kb, disable_web_page_preview=True
         )
         messages.append(sent_msg.message_id)
@@ -211,11 +213,36 @@ async def cmd_delete_my_ads(msg: Message, db: AsyncSession, state: FSMContext):
 
 
 async def btn_select_ad_for_delete(call: CallbackQuery, db: AsyncSession, state: FSMContext):
-    await db_queries.delete_sending(db, call.data)
+    await db_queries.delete_sending(db, call.data.split(":")[-1])
     data = await state.get_data()
     for message in data["messages"]:
         await call.bot.delete_message(call.from_user.id, int(message))
     await call.message.answer("Готово")
+    await state.finish()
+
+
+async def btn_select_ad_for_change(call: CallbackQuery, db: AsyncSession, state: FSMContext):
+    sending = await db_queries.get_sending_by_price(db, call.data.split(":")[-1])
+    kb = kb_admin.select_title_or_link_for_change()
+    await state.update_data(sending=sending)
+    await call.message.answer("Что изменить?", reply_markup=kb)
+    await state.set_state("select_title_or_link")
+
+
+async def btn_select_title_or_link(call: CallbackQuery, state: FSMContext):
+    message = {"title": "новое название", "link": "новую ссылку"}
+    await call.message.answer(f"Введите {message[call.data]}")
+    await state.update_data(who_change=call.data)
+    await state.set_state("new_title_or_link")
+
+
+async def get_new_title_or_link(msg: Message, db: AsyncSession, state: FSMContext):
+    data = await state.get_data()
+    if data["who_change"] == "title":
+        await db_queries.update_sending(db, data["sending"].price, {"button_title": msg.text})
+    else:
+        await db_queries.update_sending(db, data["sending"].price, {"button_link": msg.text})
+    await msg.answer("Готово")
     await state.finish()
 
 
@@ -274,6 +301,9 @@ def register_admin(dp: Dispatcher):
     dp.register_callback_query_handler(btn_select_period_for_promo_code, state="select_period_for_promo_code")
     dp.register_message_handler(get_file_with_group_user, state="get_file_group_user",
                                 content_types=ContentType.DOCUMENT)
-    dp.register_callback_query_handler(btn_select_ad_for_delete, state="select_ad_for_delete")
+    dp.register_callback_query_handler(btn_select_ad_for_delete, text_contains="del", state="select_ad_for_delete")
+    dp.register_callback_query_handler(btn_select_ad_for_change, text_contains="ch", state="select_ad_for_delete")
+    dp.register_callback_query_handler(btn_select_title_or_link, state="select_title_or_link")
+    dp.register_message_handler(get_new_title_or_link, state="new_title_or_link")
     dp.register_message_handler(get_file_with_words, state="get_file_with_words", content_types=ContentType.DOCUMENT)
     dp.register_message_handler(get_ads_message, state="get_ads_message")

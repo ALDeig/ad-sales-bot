@@ -90,7 +90,10 @@ async def get_message_in_group(msg: types.Message, db: AsyncSession, state: FSMC
         if result_check_count_message:
             await send_ads(redis, db, msg)
         return
-    await msg.delete()
+    try:
+        await msg.delete()
+    except MessageToDeleteNotFound:
+        pass
     kb, right_emoji = emojis_kb(msg.from_user.id)
     text = f"❗️ВАЖНО: {msg.from_user.first_name}, если ты не БОТ и не СПАМЕР, пройди проверку, нажав на кнопку, \
 где есть {right_emoji}"

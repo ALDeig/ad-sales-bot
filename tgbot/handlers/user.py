@@ -130,11 +130,11 @@ async def end_select_chat(msg: Message, db: AsyncSession, state: FSMContext):  #
     await msg.answer("Готово", reply_markup=kb_user.cancel_back)
     data = await state.get_data()
     if not data["select_chats"]:
-        await msg.answer("Вы не выбрил ни одного чата. Продолжите выбор или нажмите /start",
+        await msg.answer("Вы не выбрали ни одного чата. Продолжите выбор или нажмите /start",
                          reply_markup=kb_user.end_select_chat)
         return
     config = msg.bot.get("config")
-    sending_data = SendingData(period=data["period"], chats=data["select_chats"])
+    sending_data = SendingData(period=data["period"], chats=data["select_chats"], price_in_usd=data["tmp_price"])
     prices = await service.get_prices(db, sending_data, config.pay.alpha_vantage_key)
     await state.update_data(sending_data=sending_data, prices=prices)
     await step_get_button_link(msg, db, state, prices)

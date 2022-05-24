@@ -20,8 +20,17 @@ def add_chat(chat_id: int | str):
     return kb
 
 
-def select_sending(my_ad: Sending):
+def select_sending(price: str):
+    kb = InlineKeyboardMarkup(row_width=2).add(
+        InlineKeyboardButton(text="Изменить", callback_data=f"ch:{price}"),
+        InlineKeyboardButton(text="Удалить", callback_data=f"del:{price}")
+    )
+    return kb
+
+
+def select_title_or_link_for_change():
     kb = InlineKeyboardMarkup(row_width=1).add(
-        InlineKeyboardButton(text="Удалить", callback_data=my_ad.price)
+        InlineKeyboardButton(text="Название кнопки", callback_data="title"),
+        InlineKeyboardButton(text="Ссылка", callback_data="link")
     )
     return kb

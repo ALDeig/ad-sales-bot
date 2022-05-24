@@ -2,12 +2,13 @@ from datetime import date, timedelta, datetime
 from uuid import UUID
 
 import sqlalchemy as sa
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.dialects.postgresql import insert
 
 from tgbot.models.tables import User, Sending, Message, Chat, GroupUser
-from tgbot.services.datatypes import ChatData, SendingData
+from tgbot.services.datatypes import ChatData, SendingData, ChatInfo, SendingWithChats
 
 
 # Запросы для сообщений
@@ -81,7 +82,7 @@ async def delete_chat(session: AsyncSession, chat_id: str):
 
 
 async def add_sendings(session: AsyncSession, sending_data: SendingData, price: str, from_chat_id: int, is_paid=False):
-    expiration = date.today() + timedelta(days=7) if is_paid else None
+    expiration = date.today() + timedelta(days=sending_data.period.value) if is_paid else None
     for chat in sending_data.chats:
         sending = Sending(
             chat=chat,
@@ -89,7 +90,10 @@ async def add_sendings(session: AsyncSession, sending_data: SendingData, price: 
             button_link=sending_data.btn_link,
             price=price,
             expiration=expiration,
-            user_id=from_chat_id
+            user_id=from_chat_id,
+            price_in_usd=sending_data.price_in_usd,
+            currency=sending_data.currency,
+            who_gave_promo_code=sending_data.who_gave_promo_code
         )
         session.add(sending)
     await session.commit()
@@ -108,16 +112,33 @@ async def get_sendings_by_chat(session: AsyncSession, chat_id: str) -> list[Send
     return result.scalars().all()
 
 
-async def get_sendings_by_user(session: AsyncSession, user_id: str) -> list[Sending]:
-    # prices = await session.execute(sa.select(sa.distinct(Sending.price)).where(Sending.user_id == user_id))
-    prices = await session.execute(sa.select(sa.distinct(Sending.price)))
-    result = []
-    for price in prices:
-        # sql = sa.select(Sending).where(Sending.price == price[0], Sending.user_id == user_id).limit(1)
-        sql = sa.select(Sending).where(Sending.price == price[0]).limit(1)
-        sending = await session.execute(sql)
-        result.append(sending.scalar())
-    return result
+async def get_sending_by_price(session: AsyncSession, price: str) -> Sending:
+    result = await session.execute(sa.select(Sending).where(Sending.price == price))
+    return result.scalar()
+
+
+async def get_sending_list(session: AsyncSession) -> dict[str, SendingWithChats]:
+    sql = sa.select(
+        Sending.chat, Sending.button_link, Sending.button_title, Sending.price, Sending.expiration, Sending.created,
+        Sending.user_id, Sending.price_in_usd, Sending.currency, Sending.who_gave_promo_code, Chat.name)\
+        .join(Chat.sending_id)
+    list_sending = await session.execute(sql)
+    list_sending_with_chats = {}
+    for sending in list_sending.all():
+        if sending.price in list_sending_with_chats:
+            list_sending_with_chats[sending.price].chats.append(ChatInfo(id=sending.chat, name=sending.name))
+        else:
+            list_sending_with_chats[sending.price] = SendingWithChats.from_orm(sending)
+            list_sending_with_chats[sending.price].chats = [ChatInfo(id=sending.chat, name=sending.name)]
+    return list_sending_with_chats
+
+
+    # prices = await session.execute(sa.select(sa.distinct(Sending.price)))
+    # for price in prices:
+    #     sql = sa.select(Sending).where(Sending.price == price[0]).limit(1)
+    #     sending = await session.execute(sql)
+    #     result.append(sending.scalar())
+    # return result
 
 
 async def delete_sending(session: AsyncSession, price: str):
@@ -132,8 +153,8 @@ async def delete_old_sending(session: AsyncSession, admin_ids: list):
     # return res.scalars().all()
 
 
-async def update_sending(session: AsyncSession, sending_id: UUID, job_id: UUID):
-    await session.execute(sa.update(Sending).where(Sending.id == sending_id).values(job_id=job_id))
+async def update_sending(session: AsyncSession, price: str, values: dict):
+    await session.execute(sa.update(Sending).where(Sending.price == price).values(**values))
     await session.commit()
 
 

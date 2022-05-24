@@ -34,6 +34,10 @@ class Sending(Base):
     expiration = sa.Column(sa.Date(), nullable=True)
     created = sa.Column(sa.Date(), server_default=sa.sql.func.now())
     user_id = sa.Column(sa.ForeignKey("users.id"))
+    price_in_usd = sa.Column(sa.Integer())
+    currency = sa.Column(sa.String(), nullable=True)
+    who_gave_promo_code = sa.Column(sa.BigInteger(), nullable=True)
+
 
 
 class Message(Base):

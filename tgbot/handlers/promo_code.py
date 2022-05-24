@@ -23,9 +23,11 @@ async def get_promo_code(msg: Message, db: AsyncSession, state: FSMContext):
     chats = await db_queries.get_chats(db)
     periods = {"7": Period.week, "30": Period.month, "90": Period.three_month}
     kb = kb_user.select_chat_for_buy(chats, periods[period])
-    await state.update_data(period=periods[period], chats=chats, select_chats=[], is_paid=True)
     await state.set_state("select_chat")
     await msg.answer("Выберите чаты", reply_markup=kb)
+    message_with_price = await msg.answer("Сумма к оплате: 0 USD")
+    await state.update_data(period=periods[period], chats=chats, select_chats=[], tmp_price=0,
+                            id_msg_with_sum=message_with_price.message_id, is_paid=True, who_gave_promo_code=user_id)
     await msg.answer('После завершения выбора нажмите "Завершить выбор"', reply_markup=kb_user.end_select_chat)
 
 

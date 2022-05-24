@@ -20,8 +20,10 @@ async def get_selected_currency(call: types.CallbackQuery, db: AsyncSession, sta
     sending_data = data["sending_data"]
     currencies = {"btc": Currencies.btc, "ltc": Currencies.ltc, "dash": Currencies.dash}
     payment = Payment(data["prices"], data["sending_data"].period.value, currencies[call.data])
+    sending_data.currency = call.data
     if data.get("is_paid", None):
-        await db_queries.add_sendings(db, data["sending_data"], str(payment.get_price_in_currency()),
+        sending_data.who_gave_promo_code = data["who_gave_promo_code"]
+        await db_queries.add_sendings(db, sending_data, str(payment.get_price_in_currency()),
                                       call.from_user.id, is_paid=True)
         await call.message.answer("Готово")
         await state.finish()
