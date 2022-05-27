@@ -167,7 +167,6 @@ async def cmd_get_promo_code(msg: Message, state: FSMContext):
 
 async def btn_select_period_for_promo_code(call: CallbackQuery, db: AsyncSession, state: FSMContext):
     await call.answer()
-    print(call.data)
     promo_code = service.generate_promo_code(call.data, call.from_user.id)
     await call.message.answer(promo_code)
     await add_message(db, "promo_code", promo_code)

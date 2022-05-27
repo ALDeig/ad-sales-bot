@@ -138,7 +138,6 @@ async def check_payment(call: CallbackQuery, payment: Payment, sending_data: Sen
         try:
             await payment.check_payment()
         except NoPaymentFound:
-            print("Оплата не прошла")
             await asyncio.sleep(5 * 60)
             continue
         else:
