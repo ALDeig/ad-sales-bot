@@ -14,7 +14,7 @@ from tgbot.services.db_queries import get_chats, delete_chat, add_message, add_u
 from tgbot.keyboards import kb_admin, kb_user
 
 
-def check_msg_price(msg_text: str) -> int | None:
+def _check_msg_price(msg_text: str) -> int | None:
     try:
         price = int(msg_text)
     except ValueError:
@@ -54,7 +54,7 @@ async def btn_add_chat(call: CallbackQuery, state: FSMContext):
 
 
 async def get_amount_posts(msg: Message, state: FSMContext):
-    amount = check_msg_price(msg.text)
+    amount = _check_msg_price(msg.text)
     if not amount:
         await msg.answer("Ответ должен быть числом")
         return
@@ -66,7 +66,7 @@ async def get_amount_posts(msg: Message, state: FSMContext):
 
 
 async def price_month(msg: Message, state: FSMContext):
-    price = check_msg_price(msg.text)
+    price = _check_msg_price(msg.text)
     if not price:
         await msg.answer("Цена должна быть числом")
         return
@@ -78,7 +78,7 @@ async def price_month(msg: Message, state: FSMContext):
 
 
 async def price_three_month(msg: Message, state: FSMContext):
-    price = check_msg_price(msg.text)
+    price = _check_msg_price(msg.text)
     if not price:
         await msg.answer("Цена должна быть числом")
         return
@@ -90,7 +90,7 @@ async def price_three_month(msg: Message, state: FSMContext):
 
 
 async def price_week(msg: Message, db, state: FSMContext):
-    price = check_msg_price(msg.text)
+    price = _check_msg_price(msg.text)
     if not price:
         await msg.answer("Цена должна быть числом")
         return

@@ -14,7 +14,8 @@ async def user_start(msg: Message, db: AsyncSession, state: FSMContext):  # hand
     await db_queries.add_user(db, msg.from_user.id, msg.from_user.username)
     start_message = await db_queries.get_message(db, "start")
     kb = kb_user.buy_ad()
-    await msg.answer(start_message.message if start_message else "Стартовое сообщение", reply_markup=kb)
+    await msg.answer(start_message.message if start_message else "Стартовое сообщение", disable_web_page_preview=True,
+                     reply_markup=kb)
 
 
 async def btn_buy_ad_func(message: Message, state: FSMContext):
