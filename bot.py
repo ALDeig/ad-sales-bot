@@ -42,19 +42,21 @@ def register_all_handlers(dp):
 
 async def set_commands(dp: Dispatcher, admin_ids: list[int]):
     await dp.bot.set_my_commands(
-        commands=[BotCommand("start", "Старт")]
+        commands=[BotCommand("start", "Старт"), BotCommand("partners", "Партнеры")]
     )
     commands_for_admin = [
         BotCommand("start", "Старт"),
         # BotCommand("add_chat", "Добавить чат (в группе)"),
         BotCommand("delete_chat", "Удалить чат"),
         BotCommand("edit_chat", "Изменить чат"),
-        BotCommand("add_group_user", "Добавить пользователя без каптчи"),
+        BotCommand("add_group_user", "Добавить пользователя без капчи"),
         BotCommand("send_forbidden_words", "Ввести слова для удаления"),
         BotCommand("get_promo_code", "Получить промокод"),
         BotCommand("update_start_message", "Изменить приветственное сообщение"),
         BotCommand("delete_ads", "Изменение/Удаление рассылок"),
-        BotCommand("ads_message", "Изменить рекламное сообщение")
+        BotCommand("ads_message", "Изменить рекламное сообщение"),
+        BotCommand("set_partners", "Изменить текст партнеров"),
+        BotCommand("partners", "Партнеры")
     ]
     for admin_id in admin_ids:
         try:

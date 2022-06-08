@@ -211,6 +211,12 @@ async def btn_back(msg: Message, db: AsyncSession, state: FSMContext):
     await functions[now_state](msg, db, state)
 
 
+async def cmd_partners(msg: Message, db: AsyncSession):
+    partners_text = await db_queries.get_message(db, "partners")
+    message_text = partners_text.message if partners_text else "Пока нет текста"
+    await msg.answer(message_text)
+
+
 def register_user(dp: Dispatcher):
     dp.register_message_handler(user_start, commands=["start"], state="*", is_private=True)
     dp.register_message_handler(user_start, text="В начало", state="*", is_private=True)
@@ -223,4 +229,5 @@ def register_user(dp: Dispatcher):
     dp.register_message_handler(end_select_chat, text="Завершить выбор", state="select_chat")
     dp.register_message_handler(get_button_link, state="get_button_link")
     dp.register_message_handler(get_button_title, state="get_button_title")
+    dp.register_message_handler(cmd_partners, commands=["partners"], is_private=True)
 

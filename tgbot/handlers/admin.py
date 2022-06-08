@@ -325,6 +325,17 @@ async def get_ads_message(msg: Message, db: AsyncSession, state: FSMContext):
     await state.finish()
 
 
+async def cmd_set_partners(msg: Message, state: FSMContext):
+    await msg.answer("Введите текст")
+    await state.set_state("get_partners_text")
+
+
+async def get_partners_text(msg: Message, db: AsyncSession, state: FSMContext):
+    await db_queries.add_message(db, "partners", msg.text)
+    await state.finish()
+    await msg.answer("Готово")
+
+
 def register_admin(dp: Dispatcher):
     dp.register_message_handler(user_start, commands=["start"], state="*", is_private=True)
     dp.register_message_handler(user_start, text="В начало", state="*", is_private=True)
@@ -337,6 +348,8 @@ def register_admin(dp: Dispatcher):
     dp.register_message_handler(cmd_delete_my_ads, commands=["delete_ads"], state="*", is_admin=True)
     dp.register_message_handler(cmd_forbidden_words, commands=["send_forbidden_words"], state="*", is_admin=True)
     dp.register_message_handler(cmd_change_ads_message, commands=["ads_message"], state="*", is_admin=True)
+    dp.register_message_handler(cmd_set_partners, commands=["set_partners"], is_admin=True)
+    dp.register_message_handler(get_partners_text, state="get_partners_text")
     dp.register_callback_query_handler(btn_add_chat, lambda call: call.data.startswith("add"))
     dp.register_message_handler(get_amount_posts, state="get_amount_posts")
     dp.register_message_handler(price_month, state="price_month")
