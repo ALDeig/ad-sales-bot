@@ -53,7 +53,7 @@ async def set_commands(dp: Dispatcher, admin_ids: list[int]):
         BotCommand("send_forbidden_words", "Ввести слова для удаления"),
         BotCommand("get_promo_code", "Получить промокод"),
         BotCommand("update_start_message", "Изменить приветственное сообщение"),
-        BotCommand("delete_ads", "Удалить рассылку"),
+        BotCommand("delete_ads", "Изменение/Удаление рассылок"),
         BotCommand("ads_message", "Изменить рекламное сообщение")
     ]
     for admin_id in admin_ids:

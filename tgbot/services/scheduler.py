@@ -12,7 +12,7 @@ scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 async def job_for_delete_sendings(session_factory: sessionmaker, admin_ids: list):
     async with session_factory() as session:
         await db_queries.delete_old_sending(session, admin_ids)
-        await db_queries.delete_group_user(session, datetime.now() - timedelta(days=1))
+        await db_queries.delete_group_user(session, datetime.now() - timedelta(days=3))
 
 
 # async def update_sending_on_start_bot(bot, session_factory):

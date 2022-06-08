@@ -9,8 +9,9 @@ from aioredis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tgbot.services import service, db_queries
-from tgbot.services.datatypes import ChatData
+from tgbot.services.datatypes import ChatData, Period, SendingData
 from tgbot.services.db_queries import get_chats, delete_chat, add_message, add_user, get_message
+from tgbot.models.tables import Sending
 from tgbot.keyboards import kb_admin, kb_user
 
 
@@ -245,6 +246,53 @@ async def get_new_title_or_link(msg: Message, db: AsyncSession, state: FSMContex
     await state.finish()
 
 
+async def btn_change_chats(call: CallbackQuery, db: AsyncSession, state: FSMContext):
+    data = await state.get_data()
+    sending: Sending = data["sending"]
+    all_chats = await db_queries.get_chats(db)
+    selected_chats = await db_queries.get_all_sending_by_price(db, sending.price)
+    selected_chats = [sending.chat for sending in selected_chats]
+    kb = kb_user.select_chat_for_buy(all_chats, Period.month, selected_chats)
+    await state.set_state("select_chat_for_change")
+    await call.message.answer("Выберите чаты", reply_markup=kb)
+    await state.update_data(chats=all_chats, select_chats=selected_chats, tmp_price=0, period=Period.week)
+    await call.message.answer('После завершения выбора нажмите "Завершить выбор"', reply_markup=kb_user.end_select_chat)
+
+
+async def select_chats(call: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    select_chats = data["select_chats"]
+    chat_id, price = call.data.split(":")
+    if chat_id in select_chats:
+        select_chats.remove(chat_id)
+        data["tmp_price"] -= int(price)
+    else:
+        select_chats.append(chat_id)
+        data["tmp_price"] += int(price)
+    await state.update_data({"select_chats": select_chats, "tmp_price": data["tmp_price"]})
+    kb = kb_user.select_chat_for_buy(data["chats"], data["period"], select_chats)
+    await call.message.edit_reply_markup(reply_markup=kb)
+
+
+async def btn_end_select_chat(msg: Message, db: AsyncSession, state: FSMContext):
+    data = await state.get_data()
+    chats = data["select_chats"]
+    sending: Sending = data["sending"]
+    sending_data = SendingData(
+        period=Period.week,
+        chats=chats,
+        btn_title=sending.button_title,
+        btn_link=sending.button_link,
+        price_in_usd=sending.price_in_usd,
+        currency=sending.currency,
+        who_gave_promo_code=sending.who_gave_promo_code
+    )
+    await db_queries.delete_sending(db, sending.price)
+    await db_queries.add_sendings(db, sending_data, sending.price, msg.from_user.id, True)
+    await state.finish()
+    await msg.answer("Готово")
+
+
 async def cmd_forbidden_words(msg: Message, state: FSMContext):
     await msg.answer("Отправьте файл со словами")
     await state.set_state("get_file_with_words")
@@ -302,7 +350,10 @@ def register_admin(dp: Dispatcher):
                                 content_types=ContentType.DOCUMENT)
     dp.register_callback_query_handler(btn_select_ad_for_delete, text_contains="del", state="select_ad_for_delete")
     dp.register_callback_query_handler(btn_select_ad_for_change, text_contains="ch", state="select_ad_for_delete")
+    dp.register_callback_query_handler(btn_change_chats, text="chats", state="select_title_or_link")
     dp.register_callback_query_handler(btn_select_title_or_link, state="select_title_or_link")
+    dp.register_callback_query_handler(select_chats, state="select_chat_for_change")
+    dp.register_message_handler(btn_end_select_chat, text="Завершить выбор", state="select_chat_for_change")
     dp.register_message_handler(get_new_title_or_link, state="new_title_or_link")
     dp.register_message_handler(get_file_with_words, state="get_file_with_words", content_types=ContentType.DOCUMENT)
     dp.register_message_handler(get_ads_message, state="get_ads_message")

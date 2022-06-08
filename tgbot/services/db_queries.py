@@ -117,10 +117,16 @@ async def get_sending_by_price(session: AsyncSession, price: str) -> Sending:
     return result.scalar()
 
 
+async def get_all_sending_by_price(session: AsyncSession, price: str) -> list[Sending]:
+    result = await session.execute(sa.select(Sending).where(Sending.price == price))
+    return result.scalars().all()
+
+
 async def get_sending_list(session: AsyncSession) -> dict[str, SendingWithChats]:
     sql = sa.select(
         Sending.chat, Sending.button_link, Sending.button_title, Sending.price, Sending.expiration, Sending.created,
         Sending.user_id, Sending.price_in_usd, Sending.currency, Sending.who_gave_promo_code, Chat.name)\
+        .order_by(Sending.created)\
         .join(Chat.sending_id)
     list_sending = await session.execute(sql)
     list_sending_with_chats = {}

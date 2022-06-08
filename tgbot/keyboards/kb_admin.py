@@ -31,6 +31,7 @@ def select_sending(price: str):
 def select_title_or_link_for_change():
     kb = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton(text="Название кнопки", callback_data="title"),
-        InlineKeyboardButton(text="Ссылка", callback_data="link")
+        InlineKeyboardButton(text="Ссылка", callback_data="link"),
+        InlineKeyboardButton(text="Чаты", callback_data="chats")
     )
     return kb
