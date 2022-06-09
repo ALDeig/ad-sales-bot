@@ -229,5 +229,5 @@ def register_user(dp: Dispatcher):
     dp.register_message_handler(end_select_chat, text="Завершить выбор", state="select_chat")
     dp.register_message_handler(get_button_link, state="get_button_link")
     dp.register_message_handler(get_button_title, state="get_button_title")
-    dp.register_message_handler(cmd_partners, commands=["partners"], is_private=True)
+    # dp.register_message_handler(cmd_partners, commands=["partners"], is_private=True)
 
