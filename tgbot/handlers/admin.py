@@ -29,6 +29,7 @@ async def user_start(msg: Message, db: AsyncSession, state: FSMContext):
     start_message = await get_message(db, "start")
     kb = kb_user.buy_ad()
     await msg.answer(start_message.message if start_message else "Стартовое сообщение", reply_markup=kb)
+    await msg.answer_video("BAACAgIAAxkBAAIoEWKi4l6oJQwbOA1_viq_SEGlbmnRAAINHQACCv0QSWsfaYNpUyQtJAQ")
 
 
 # Добавление чата
@@ -336,7 +337,13 @@ async def get_partners_text(msg: Message, db: AsyncSession, state: FSMContext):
     await msg.answer("Готово")
 
 
+# async def get_file(msg: Message, state: FSMContext):
+#     print(msg)
+    # await msg.answer_video("BAACAgIAAxkBAAIoEWKi4l6oJQwbOA1_viq_SEGlbmnRAAINHQACCv0QSWsfaYNpUyQtJAQ")
+
+
 def register_admin(dp: Dispatcher):
+    # dp.register_message_handler(get_file, content_types=ContentType.VIDEO)
     dp.register_message_handler(user_start, commands=["start"], state="*", is_private=True)
     dp.register_message_handler(user_start, text="В начало", state="*", is_private=True)
     dp.register_message_handler(cmd_add_chat, commands=["add_chat"], state="*", is_admin=True)

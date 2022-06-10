@@ -16,6 +16,7 @@ async def user_start(msg: Message, db: AsyncSession, state: FSMContext):  # hand
     kb = kb_user.buy_ad()
     await msg.answer(start_message.message if start_message else "Стартовое сообщение", disable_web_page_preview=True,
                      reply_markup=kb)
+    await msg.answer_video("BAACAgIAAxkBAAIoEWKi4l6oJQwbOA1_viq_SEGlbmnRAAINHQACCv0QSWsfaYNpUyQtJAQ")
 
 
 async def btn_buy_ad_func(message: Message, state: FSMContext):
