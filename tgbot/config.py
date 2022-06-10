@@ -15,6 +15,7 @@ class TgBot(DefaultConfig):
     token: str
     admins: list[int]
     provider_token: str
+    start_video_hash: str
     use_redis: bool
 
 
@@ -36,12 +37,7 @@ class DbConfig(DefaultConfig):
         env_prefix = "DB_"
 
 
-
-
 class Settings(BaseSettings):
     tg: TgBot = TgBot()
     db: DbConfig = DbConfig()
     pay: BlockCypher = BlockCypher()
-    # request_link: str = "bitcoin:{address}?" \
-    #                     "amount={amount}" \
-    #                     "&label={message}"

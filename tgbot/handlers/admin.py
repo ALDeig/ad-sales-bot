@@ -25,11 +25,12 @@ def _check_msg_price(msg_text: str) -> int | None:
 
 async def user_start(msg: Message, db: AsyncSession, state: FSMContext):
     await state.finish()
+    config = msg.bot.get("config")
     await add_user(db, msg.from_user.id, msg.from_user.username)
     start_message = await get_message(db, "start")
     kb = kb_user.buy_ad()
     await msg.answer(start_message.message if start_message else "Стартовое сообщение", reply_markup=kb)
-    await msg.answer_video("BAACAgIAAxkBAAIoEWKi4l6oJQwbOA1_viq_SEGlbmnRAAINHQACCv0QSWsfaYNpUyQtJAQ")
+    await msg.answer_video(config.tg.start_video_hash)
 
 
 # Добавление чата

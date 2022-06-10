@@ -11,12 +11,13 @@ from tgbot.services.datatypes import Period, SendingData
 
 async def user_start(msg: Message, db: AsyncSession, state: FSMContext):  # handler
     await state.finish()
+    config = msg.bot.get("config")
     await db_queries.add_user(db, msg.from_user.id, msg.from_user.username)
     start_message = await db_queries.get_message(db, "start")
     kb = kb_user.buy_ad()
     await msg.answer(start_message.message if start_message else "Стартовое сообщение", disable_web_page_preview=True,
                      reply_markup=kb)
-    await msg.answer_video("BAACAgIAAxkBAAIoEWKi4l6oJQwbOA1_viq_SEGlbmnRAAINHQACCv0QSWsfaYNpUyQtJAQ")
+    await msg.answer_video(config.tg.start_video_hash)
 
 
 async def btn_buy_ad_func(message: Message, state: FSMContext):
